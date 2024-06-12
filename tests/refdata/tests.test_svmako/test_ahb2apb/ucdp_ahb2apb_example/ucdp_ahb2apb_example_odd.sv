@@ -32,17 +32,19 @@
 // Data Model: ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
 //
 //
-//
 // Size: 36 KB
 //
-// | Namespace | Type  | Base    | Size            | Attributes |
+// | Addrspace | Type  | Base    | Size            | Attributes |
 // | --------- | ----  | ----    | ----            | ---------- |
 // | foo       | Slave | +0x0    | 1024x32 (4 KB)  | Sub        |
 // | bar       | Slave | +0x1000 | 1024x32 (4 KB)  | Sub        |
 // | baz       | Slave | +0x4000 | 3328x32 (13 KB) | Sub        |
-// | bar       | Slave | +0x8000 | 1024x32 (4 KB)  | Sub        |//
+// | bar       | Slave | +0x8000 | 1024x32 (4 KB)  | Sub        |
+//
 // =============================================================================
 
+`begin_keywords 1800-2009
+`default_nettype none
 
 module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   // main_i
@@ -93,3 +95,6 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
 // TODO
 
 endmodule // ucdp_ahb2apb_example_odd
+
+`default_nettype wire
+`end_keywords

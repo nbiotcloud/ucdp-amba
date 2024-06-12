@@ -30,16 +30,24 @@ from logging import getLogger
 from typing import ClassVar
 
 import ucdp as u
+from ucdp_glbl import AddrDecoder, AddrSlave
 from ucdp_glbl.types import LevelIrqType
 
 from . import types as t
-from .demux import Demux
-from .slave import Slave
 
 LOGGER = getLogger(__name__)
 
 
-class UcdpAhb2apbMod(u.ATailoredMod, Demux):
+class Slave(AddrSlave):
+    """
+    Slave.
+    """
+
+    proto: t.AmbaProto
+    """Protocol Version."""
+
+
+class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
     """
     AHB to APB Bridge.
 
@@ -51,11 +59,9 @@ class UcdpAhb2apbMod(u.ATailoredMod, Demux):
 
     >>> ahb2apb = Mod().get_inst("u_ahb2apb")
     >>> print(ahb2apb.get_overview())
-    <BLANKLINE>
-    <BLANKLINE>
     Size: 8 KB
     <BLANKLINE>
-    | Namespace | Type  | Base    | Size           | Attributes |
+    | Addrspace | Type  | Base    | Size           | Attributes |
     | --------- | ----  | ----    | ----           | ---------- |
     | uart      | Slave | +0x0    | 1024x32 (4 KB) | Sub        |
     | spi       | Slave | +0x1000 | 1024x32 (4 KB) | Sub        |
@@ -66,7 +72,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, Demux):
         u.ModFileList(
             name="hdl",
             gen="full",
-            filepaths=("{mod.topmodname}/{mod.modname}.sv"),
+            filepaths=("$PRJROOT/{mod.topmodname}/{mod.modname}.sv"),
             template_filepaths=("ucdp_ahb2apb.sv.mako", "sv.mako"),
         ),
     )
@@ -92,7 +98,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, Demux):
         size: u.Bytes | None = None,
         proto: t.AmbaProto | None = None,
         route: u.Routeable | None = None,
-        mod: u.BaseMod | str | None = None,
+        ref: u.BaseMod | str | None = None,
     ):
         """
         Add APB Slave.
@@ -105,12 +111,13 @@ class UcdpAhb2apbMod(u.ATailoredMod, Demux):
             size: Address Space.
             proto: AMBA Protocol Selection.
             route: APB Slave Port to connect.
-            mod: Logical Mod connected.
+            ref: Logical Module connected.
             auser: User vector if there is not incoming `auser` signal.
         """
         proto = proto or self.proto
-        self.slaves[name] = slave = Slave(name=name, demux=self, proto=proto, mod=mod)
-        if subbaseaddr is not None:
+        slave = Slave(name=name, addrdecoder=self, proto=proto, ref=ref)
+        self.slaves.add(slave)
+        if subbaseaddr is not None and (size is not None or self.default_size):
             slave.add_addrrange(subbaseaddr, size)
 
         portname = f"apb_slv_{name}_o"

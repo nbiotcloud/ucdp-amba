@@ -36,3 +36,11 @@ def test_ahb2apb(tmp_path):
     with mock.patch.dict(os.environ, {"PRJROOT": str(tmp_path)}):
         u.generate(top.mod, "hdl")
     assert_refdata(test_ahb2apb, tmp_path)
+
+
+def test_ahb_ml(tmp_path):
+    """AHB Multilayer Module."""
+    top = u.load("ucdp_amba.ucdp_ahb_ml")
+    with mock.patch.dict(os.environ, {"PRJROOT": str(tmp_path)}):
+        u.generate(top.mod, "hdl")
+    assert_refdata(test_ahb_ml, tmp_path)

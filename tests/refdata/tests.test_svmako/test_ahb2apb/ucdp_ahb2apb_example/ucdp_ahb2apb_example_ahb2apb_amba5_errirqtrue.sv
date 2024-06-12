@@ -28,22 +28,24 @@
 //
 // =============================================================================
 //
-// Module:     ucdp_amba.ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue
+// Module:     ucdp_amba.ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue
 // Data Model: ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
-//
 //
 //
 // Size: 12 KB
 //
-// | Namespace | Type  | Base    | Size           | Attributes |
+// | Addrspace | Type  | Base    | Size           | Attributes |
 // | --------- | ----  | ----    | ----           | ---------- |
 // | default   | Slave | +0x0    | 1024x32 (4 KB) | Sub        |
 // | slv3      | Slave | +0x1000 | 1024x32 (4 KB) | Sub        |
-// | slv5      | Slave | +0x2000 | 1024x32 (4 KB) | Sub        |//
+// | slv5      | Slave | +0x2000 | 1024x32 (4 KB) | Sub        |
+//
 // =============================================================================
 
+`begin_keywords 1800-2009
+`default_nettype none
 
-module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
+module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   // main_i
   input  wire         main_clk_i,
   input  wire         main_rst_an_i,             // Async Reset (Low-Active)
@@ -51,6 +53,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   // ahb_slv_i: AHB Slave
   input  wire         ahb_slv_hsel_i,            // AHB Slave Select
   input  wire  [31:0] ahb_slv_haddr_i,           // AHB Bus Address
+  input  wire  [3:0]  ahb_slv_hauser_i,          // Address User Channel
   input  wire         ahb_slv_hwrite_i,          // AHB Write Enable
   input  wire  [1:0]  ahb_slv_htrans_i,          // AHB Transfer Type
   input  wire  [2:0]  ahb_slv_hsize_i,           // AHB Size
@@ -63,6 +66,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   output logic [31:0] ahb_slv_hrdata_o,          // AHB Data
   // apb_slv_default_o: APB Slave 'default'
   output logic [31:0] apb_slv_default_paddr_o,   // APB Bus Address
+  output logic [3:0]  apb_slv_default_pauser_o,  // Address User Channel
   output logic        apb_slv_default_pwrite_o,  // APB Write Enable
   output logic [31:0] apb_slv_default_pwdata_o,  // APB Data
   output logic        apb_slv_default_penable_o, // APB Transfer Enable
@@ -93,4 +97,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
 
 // TODO
 
-endmodule // ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue
+endmodule // ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue
+
+`default_nettype wire
+`end_keywords
