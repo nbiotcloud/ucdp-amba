@@ -70,7 +70,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
             name="hdl",
             gen="full",
             filepaths=("$PRJROOT/{mod.topmodname}/{mod.modname}.sv"),
-            template_filepaths=("ucdp_ahb2apb.sv.mako", "sv.mako"),
+            template_filepaths=("ucdp_ahb_ml.sv.mako", "sv.mako"),
         ),
     )
     proto: t.AmbaProto = t.AmbaProto()
