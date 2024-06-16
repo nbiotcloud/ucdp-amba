@@ -24,7 +24,7 @@
 
 [project]
 name = "ucdp-amba"
-version = "0.2.0"
+version = "0.3.0"
 description = "Unified Chip Design Platform - AMBA"
 readme = "README.md"
 authors = [
@@ -35,7 +35,7 @@ classifiers = [
 ]
 requires-python = ">=3.10.0,<4.0"
 dependencies = [
-    "ucdp-glbl>=0.4.0",
+    "ucdp-glbl>=0.5.0",
 ]
 
 [project.urls]

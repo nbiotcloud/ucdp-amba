@@ -26,21 +26,18 @@
 Unified Chip Design Platform - AMBA - AHB Multilayer.
 """
 
-from collections import defaultdict
 from logging import getLogger
 from typing import ClassVar
 
 import ucdp as u
-from tabulate import tabulate
-from ucdp_glbl import AddrSlave
-from ucdp_glbl.addrdecoder import AddrDecoder
+from ucdp_glbl import AddrMaster, AddrMatrix, AddrRef, AddrSlave
 
 from . import types as t
 
 LOGGER = getLogger(__name__)
 
 
-class Master(u.NamedObject):
+class Master(AddrMaster):
     """
     Master.
     """
@@ -58,7 +55,7 @@ class Slave(AddrSlave):
     """Protocol Version."""
 
 
-class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
+class UcdpAhbMlMod(AddrMatrix, u.ATailoredMod):
     """
     AHB Multilayer.
 
@@ -77,12 +74,6 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
     """Default Protocol."""
     is_sub: bool = False
     """Full Address Decoding By Default."""
-
-    masters: u.Namespace = u.Field(default_factory=u.Namespace)
-    """Masters."""
-
-    _master_slaves = u.PrivateField(default_factory=lambda: defaultdict(set))
-    _slave_masters = u.PrivateField(default_factory=lambda: defaultdict(set))
 
     def _build(self):
         self.add_port(u.ClkRstAnType(), "main_i")
@@ -108,9 +99,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
         self.check_lock()
         proto = proto or self.proto
         master = Master(name=name, proto=proto)
-        self.masters.add(master)
-
-        self.add_interconnects((name,), slavenames)
+        self._add_master(master, slavenames=slavenames)
 
         portname = f"ahb_mst_{name}_i"
         title = f"AHB Input {name!r}"
@@ -123,7 +112,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
     def add_slave(
         self,
         name: str,
-        subbaseaddr=u.AUTO,
+        baseaddr=u.AUTO,
         size: u.Bytes | None = None,
         proto: t.AmbaProto | None = None,
         masternames: u.Names | None = None,
@@ -137,7 +126,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
             name: Slave Name.
 
         Keyword Args:
-            subbaseaddr: Base address, Next Free address by default. Do not add address space if `None`.
+            baseaddr: Base address, Next Free address by default. Do not add address space if `None`.
             size: Address Space.
             proto: AMBA Protocol Selection.
             masternames: Names of masters to be accessed by this slave.
@@ -147,11 +136,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
         self.check_lock()
         proto = proto or self.proto
         slave = Slave(name=name, addrdecoder=self, proto=proto, ref=ref)
-        self.slaves.add(slave)
-        if subbaseaddr is not None and (size is not None or self.default_size):
-            slave.add_addrrange(subbaseaddr, size)
-
-        self.add_interconnects(masternames, (name,))
+        self._add_slave(slave, masternames=masternames, baseaddr=baseaddr, size=size)
 
         portname = f"ahb_slv_{name}_o"
         title = f"AHB Output {name!r}"
@@ -161,75 +146,16 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrDecoder):
 
         return slave
 
-    def add_interconnects(self, masternames: u.Names, slavenames: u.Names):
-        """Add Interconnects."""
-        self.check_lock()
-        for mastername in u.split(masternames):
-            for slavename in u.split(slavenames):
-                self._master_slaves[mastername].add(slavename)
-                self._slave_masters[slavename].add(mastername)
-
-    @property
-    def master_slaves(self) -> tuple[tuple[Master, tuple[Slave, ...]], ...]:
-        """Masters and Their Slaves."""
-        pairs: list[tuple[Master, tuple[Slave, ...]]] = []
-        for master in self.masters:
-            slavenames = self._master_slaves[master.name]
-            slaves = tuple(self.slaves[slavename] for slavename in slavenames)
-            pairs.append((master, slaves))
-        return tuple(pairs)
-
-    @property
-    def slave_masters(self) -> tuple[tuple[Slave, tuple[Master, ...]], ...]:
-        """Slaves and Their Masters."""
-        pairs: list[tuple[Slave, tuple[Master, ...]]] = []
-        for slave in self.slaves:
-            masternames = self._slave_masters[slave.name]
-            masters = tuple(self.masters[mastername] for mastername in masternames)
-            pairs.append((slave, masters))
-        return tuple(pairs)
-
     def _builddep(self):
-        # Basic checks
-        masters = self.masters
-        slaves = self.slaves
-        if not masters:
-            LOGGER.warning("%s has not masters", self)
-        if not slaves:
-            LOGGER.warning("%s has not slaves", self)
-        for master, slaves in self.master_slaves:
-            if not slaves:
-                LOGGER.warning("%s: %r has not slaves", self, master)
-        for slave, masters in self.slave_masters:
-            if not masters:
-                LOGGER.warning("%s: %r has not masters", self, slave)
-
-    def get_overview(self):
-        """Return overview tables."""
-        overview = [
-            f"Protocol: {self.proto}",
-            self._get_overview_matrix(),
-            self.addrmap.get_overview(),
-        ]
-        return "\n\n\n".join(overview)
-
-    def _get_overview_matrix(self) -> str:
-        slaves = self.slaves
-        headers = ["Master > Slave"] + [slave.name for slave in slaves]
-        idxmap = {slave.name: idx for idx, slave in enumerate(slaves, 1)}
-        empty = ["" for slave in slaves]
-        matrix = []
-        for master, slaves in self.master_slaves:
-            item = [master.name, *empty]
-            for slave in slaves:
-                item[idxmap[slave.name]] = "X"
-            matrix.append(item)
-        return tabulate(matrix, headers=headers, stralign="center")
+        self._check_masters_slaves()
 
     @staticmethod
     def build_top(**kwargs):
         """Build example top module and return it."""
         return UcdpAhbMlExampleMod()
+
+    def _resolve_ref(self, ref: AddrRef) -> AddrRef:
+        return self.parent.parser(ref)
 
 
 class UcdpAhbMlExampleMod(u.AMod):
