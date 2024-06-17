@@ -24,7 +24,7 @@
 
 [project]
 name = "ucdp-amba"
-version = "0.3.0"
+version = "0.3.1"
 description = "Unified Chip Design Platform - AMBA"
 readme = "README.md"
 authors = [

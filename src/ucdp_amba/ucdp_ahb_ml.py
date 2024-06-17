@@ -55,7 +55,7 @@ class Slave(AddrSlave):
     """Protocol Version."""
 
 
-class UcdpAhbMlMod(AddrMatrix, u.ATailoredMod):
+class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
     """
     AHB Multilayer.
 
@@ -157,9 +157,33 @@ class UcdpAhbMlMod(AddrMatrix, u.ATailoredMod):
     def _resolve_ref(self, ref: AddrRef) -> AddrRef:
         return self.parent.parser(ref)
 
+    def get_overview(self) -> str:
+        """Matrix Overview."""
+        return AddrMatrix.get_overview(self)
+
 
 class UcdpAhbMlExampleMod(u.AMod):
-    """Just an Example Multilayer."""
+    """
+    Just an Example Multilayer.
+
+    >>> print(UcdpAhbMlExampleMod().get_inst('u_ml').get_overview())
+     Master > Slave    ram    periph    misc
+    ----------------  -----  --------  ------
+          ext           X
+          dsp           X       X
+    <BLANKLINE>
+    <BLANKLINE>
+    Size: 3.75 GB
+    <BLANKLINE>
+    | Addrspace | Type     | Base       | Size                    | Attributes |
+    | --------- | ----     | ----       | ----                    | ---------- |
+    | reserved0 | Reserved | 0x0        | 1006632960x32 (3.75 GB) |            |
+    | ram       | Slave    | 0xF0000000 | 16384x32 (64 KB)        |            |
+    | periph    | Slave    | 0xF0010000 | 16384x32 (64 KB)        |            |
+    | misc      | Slave    | 0xF0020000 | 8192x32 (32 KB)         |            |
+    | reserved1 | Reserved | 0xF0028000 | 67067904x32 (255.84 MB) |            |
+    <BLANKLINE>
+    """
 
     def _build(self):
         ml = UcdpAhbMlMod(self, "u_ml")
