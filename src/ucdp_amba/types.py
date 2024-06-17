@@ -174,17 +174,17 @@ class AhbMstType(u.AStructType):
     title: str = "AHB Master"
     comment: str = "AHB Master"
     proto: AmbaProto = AMBA3
-    addr_width: int = 32
-    data_width: int = 32
+    addrwidth: int = 32
+    datawidth: int = 32
 
     def _build(self):
-        if self.data_width not in LEGAL_AHB_DATA_WIDTH:
+        if self.datawidth not in LEGAL_AHB_DATA_WIDTH:
             raise ValueError(
-                f"Illegal value for AHB data_width: {self.data_width}. Legal values are {LEGAL_AHB_DATA_WIDTH}"
+                f"Illegal value for AHB datawidth: {self.datawidth}. Legal values are {LEGAL_AHB_DATA_WIDTH}"
             )
         # FWD
         self._add("htrans", AhbTransType())
-        self._add("haddr", AhbAddrType(self.addr_width))
+        self._add("haddr", AhbAddrType(self.addrwidth))
         ausertype = self.proto.ausertype
         if ausertype:
             self._add("hauser", ausertype, title="AHB Address User Channel")
@@ -192,11 +192,11 @@ class AhbMstType(u.AStructType):
         self._add("hsize", AhbSizeType())
         self._add("hburst", AhbBurstType())
         self._add("hprot", AhbProtType())
-        self._add("hwdata", AhbDataType(self.data_width))
+        self._add("hwdata", AhbDataType(self.datawidth))
         # BWD
         self._add("hready", AhbReadyType(), u.BWD)
         self._add("hresp", AhbRespType(), u.BWD)
-        self._add("hrdata", AhbDataType(self.data_width), u.BWD)
+        self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
 
     def cast(self, other):
         """
@@ -326,17 +326,17 @@ class AhbSlvType(u.AStructType):
     title: str = "AHB Slave"
     comment: str = "AHB Slave"
     proto: AmbaProto = AMBA3
-    addr_width: int = 32
-    data_width: int = 32
+    addrwidth: int = 32
+    datawidth: int = 32
 
     def _build(self):
-        if self.data_width not in LEGAL_AHB_DATA_WIDTH:
+        if self.datawidth not in LEGAL_AHB_DATA_WIDTH:
             raise ValueError(
-                f"Illegal value for AHB data_width: {self.data_width}. Legal values are {LEGAL_AHB_DATA_WIDTH}"
+                f"Illegal value for AHB datawidth: {self.datawidth}. Legal values are {LEGAL_AHB_DATA_WIDTH}"
             )
         # FWD
         self._add("hsel", AhbSelType())
-        self._add("haddr", AhbAddrType(self.addr_width))
+        self._add("haddr", AhbAddrType(self.addrwidth))
         if self.proto.ausertype:
             self._add("hauser", self.proto.ausertype, title="AHB Address User Channel")
         self._add("hwrite", AhbWriteType())
@@ -344,14 +344,14 @@ class AhbSlvType(u.AStructType):
         self._add("hsize", AhbSizeType())
         self._add("hburst", AhbBurstType())
         self._add("hprot", AhbProtType())
-        self._add("hwdata", AhbDataType(self.data_width))
+        self._add("hwdata", AhbDataType(self.datawidth))
         title: str = "AHB Transfer Done to Slave"
         self._add("hready", AhbReadyType(), title=title, comment=title)
         # BWD
         title: str = "AHB Transfer Done from Slave"
         self._add("hreadyout", AhbReadyType(), u.BWD, title=title, comment=title)
         self._add("hresp", AhbRespType(), u.BWD)
-        self._add("hrdata", AhbDataType(self.data_width), u.BWD)
+        self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
 
     def cast(self, other):
         """
@@ -459,24 +459,24 @@ class ApbSlvType(u.AStructType):
     title: str = "APB Slave"
     comment: str = "APB Slave"
     proto: AmbaProto = AMBA3
-    addr_width: int = 12
-    data_width: int = 32
+    addrwidth: int = 12
+    datawidth: int = 32
 
     def _build(self):
-        if self.data_width not in LEGAL_APB_DATA_WIDTH:
+        if self.datawidth not in LEGAL_APB_DATA_WIDTH:
             raise ValueError(
-                f"Illegal value for APB data_width: {self.data_width}. Legal values are {LEGAL_APB_DATA_WIDTH}"
+                f"Illegal value for APB datawidth: {self.datawidth}. Legal values are {LEGAL_APB_DATA_WIDTH}"
             )
         # FWD
-        self._add("paddr", ApbAddrType(self.addr_width))
+        self._add("paddr", ApbAddrType(self.addrwidth))
         if self.proto.ausertype:
             self._add("pauser", self.proto.ausertype, title="APB Address User Channel")
         self._add("pwrite", ApbWriteType())
-        self._add("pwdata", ApbDataType(self.data_width))
+        self._add("pwdata", ApbDataType(self.datawidth))
         self._add("penable", ApbEnaType())
         self._add("psel", ApbSelType())
         # BWD
-        self._add("prdata", ApbDataType(self.data_width), u.BWD)
+        self._add("prdata", ApbDataType(self.datawidth), u.BWD)
         self._add("pslverr", ApbRespType(), u.BWD)
         self._add("pready", ApbReadyType(), u.BWD)
 
