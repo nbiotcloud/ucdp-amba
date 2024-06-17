@@ -31,8 +31,8 @@ from typing import ClassVar
 
 import ucdp as u
 from humannum import bytes_
+from ucdp_glbl import AddrDecoder, AddrRef, AddrSlave
 from icdutil import num
-from ucdp_glbl import AddrDecoder, AddrSlave
 from ucdp_glbl.types import LevelIrqType
 
 from . import types as t
@@ -121,7 +121,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
     def add_slave(
         self,
         name: str,
-        subbaseaddr=u.AUTO,
+        baseaddr=u.AUTO,
         size: u.Bytes | None = None,
         proto: t.AmbaProto | None = None,
         route: u.Routeable | None = None,
@@ -134,7 +134,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
             name: Slave Name.
 
         Keyword Args:
-            subbaseaddr: Base address, Next Free address by default. Do not add address space if `None`.
+            baseaddr: Base address, Next Free address by default. Do not add address space if `None`.
             size: Address Space.
             proto: AMBA Protocol Selection.
             route: APB Slave Port to connect.
@@ -145,8 +145,8 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         slave = Slave(name=name, addrdecoder=self, proto=proto, ref=ref)
         self.slaves.add(slave)
         size = bytes_(size or self.default_size)
-        if subbaseaddr is not None and (size is not None or self.default_size):
-            slave.add_addrrange(subbaseaddr, size)
+        if baseaddr is not None and (size is not None or self.default_size):
+            slave.add_addrrange(baseaddr, size)
 
         portname = f"apb_slv_{name}_o"
         title = f"APB Slave {name!r}"
@@ -195,12 +195,15 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
 
     def get_overview(self):
         """Overview."""
-        return self.addrmap.get_overview(skip_words_fields=True)
+        return self.addrmap.get_overview(minimal=True)
 
     @staticmethod
     def build_top(**kwargs):
         """Build example top module and return it."""
         return UcdpAhb2apbExampleMod()
+
+    def _resolve_ref(self, ref: AddrRef) -> AddrRef:
+        return self.parent.parser(ref)
 
 
 class UcdpAhb2apbExampleMod(u.AMod):

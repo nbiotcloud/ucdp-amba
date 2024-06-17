@@ -32,9 +32,6 @@
 // Data Model: ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
 //
 //
-// Protocol: AmbaProto('')
-//
-//
 //  Master > Slave    ram    periph    misc
 // ----------------  -----  --------  ------
 //       ext           X
@@ -43,18 +40,13 @@
 //
 // Size: 3.75 GB
 //
-// | Addrspace | Type  | Base       | Size             | Attributes |
-// | --------- | ----  | ----       | ----             | ---------- |
-// | ram       | Slave | 0xF0000000 | 16384x32 (64 KB) |            |
-// | periph    | Slave | 0xF0010000 | 16384x32 (64 KB) |            |
-// | misc      | Slave | 0xF0020000 | 8192x32 (32 KB)  |            |
-//
-//
-// | Addrspace | Word | Field | Offset     | Access | Reset | Attributes |
-// | --------- | ---- | ----- | ------     | ------ | ----- | ---------- |
-// | ram       |      |       | 0xF0000000 |        |       |            |
-// | periph    |      |       | 0xF0010000 |        |       |            |
-// | misc      |      |       | 0xF0020000 |        |       |            |
+// | Addrspace | Type     | Base       | Size                    | Attributes |
+// | --------- | ----     | ----       | ----                    | ---------- |
+// | reserved0 | Reserved | 0x0        | 1006632960x32 (3.75 GB) |            |
+// | ram       | Slave    | 0xF0000000 | 16384x32 (64 KB)        |            |
+// | periph    | Slave    | 0xF0010000 | 16384x32 (64 KB)        |            |
+// | misc      | Slave    | 0xF0020000 | 8192x32 (32 KB)         |            |
+// | reserved1 | Reserved | 0xF0028000 | 67067904x32 (255.84 MB) |            |
 //
 // =============================================================================
 
