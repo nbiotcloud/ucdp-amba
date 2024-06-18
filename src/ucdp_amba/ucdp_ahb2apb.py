@@ -31,8 +31,8 @@ from typing import ClassVar
 
 import ucdp as u
 from humannum import bytes_
-from ucdp_glbl import AddrDecoder, AddrRef, AddrSlave
 from icdutil import num
+from ucdp_glbl import AddrDecoder, AddrRef, AddrSlave
 from ucdp_glbl.types import LevelIrqType
 
 from . import types as t
@@ -57,12 +57,12 @@ class Ahb2ApbFsmType(u.AEnumType):
     keytype: u.UintType = u.UintType(3)
     title: str = "AHB to APB FSM Type"
     comment: str = "AHB to APB FSM Type"
-    performanceopt: bool = False
+    writeopt: bool = False
 
     def _build(self):
         self._add(0, "idle", "No transfer")
         self._add(1, "apb_ctrl", "Control Phase")
-        if self.performanceopt:
+        if self.writeopt:
             self._add(2, "apb_data_wr", "Optimized Write")
         self._add(3, "apb_data", "Data Phase")
         self._add(4, "ahb_finish", "Finish Phase")
@@ -103,7 +103,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
 
     proto: t.AmbaProto = t.AmbaProto()
     errirq: bool = False
-    performanceopt: bool = False
+    writeopt: bool = False
     is_sub: bool = True
     default_size: u.Bytes | None = 4096
     ahb_addrwidth: int = 32
@@ -175,13 +175,16 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         self.add_type_consts(t.AhbTransType())
         self.add_type_consts(t.ApbReadyType())
         self.add_type_consts(t.ApbRespType())
-        self.add_type_consts(Ahb2ApbFsmType(performanceopt=self.performanceopt), item_suffix="st")
+        self.add_type_consts(Ahb2ApbFsmType(writeopt=self.writeopt), item_suffix="st")
+        self.add_signal(u.BitType(), "ahb_slv_sel_s")
         self.add_signal(u.BitType(), "valid_addr_s")
         self.add_signal(Ahb2ApbFsmType(), "fsm_r")
         self.add_signal(t.AhbReadyType(), "hready_r")
-        self.add_signal(t.ApbRespType(), "hresp_r")
+        if not self.errirq:
+            self.add_signal(t.ApbRespType(), "hresp_r")
         rng_bits = [num.calc_unsigned_width(aspc.size - 1) for aspc in self.addrmap]
         self.add_signal(t.ApbAddrType(max(rng_bits)), "paddr_r")
+        self.add_signal(t.ApbWriteType(), "pwrite_r")
         self.add_signal(t.ApbDataType(self.datawidth), "pwdata_s")
         self.add_signal(t.ApbDataType(self.datawidth), "pwdata_r")
         self.add_signal(t.ApbDataType(self.datawidth), "prdata_s")
@@ -192,6 +195,8 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         for aspc in self.addrmap:
             self.add_signal(t.ApbSelType(), f"apb_{aspc.name}_sel_s")
             self.add_signal(t.ApbSelType(), f"apb_{aspc.name}_sel_r")
+        if self.errirq:
+            self.add_signal(LevelIrqType(), "irq_r")
 
     def get_overview(self):
         """Overview."""
@@ -228,7 +233,7 @@ class UcdpAhb2apbExampleMod(u.AMod):
                 ahb2apb.add_slave("slv3", proto=t.AMBA3)
                 ahb2apb.add_slave("slv5", proto=amba5)
 
-        ahb2apb = UcdpAhb2apbMod(self, "u_odd", ahb_addrwidth=27)
+        ahb2apb = UcdpAhb2apbMod(self, "u_odd", ahb_addrwidth=27, errirq=False)
         ahb2apb.add_slave("foo")
         ahb2apb.add_slave("bar", size="1KB")
         ahb2apb.add_slave("baz", size="13kB")

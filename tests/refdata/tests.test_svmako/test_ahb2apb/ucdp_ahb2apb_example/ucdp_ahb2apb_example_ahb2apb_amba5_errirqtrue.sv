@@ -141,11 +141,12 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   // ------------------------------------------------------
   //  Signals
   // ------------------------------------------------------
+  logic        ahb_slv_sel_s;
   logic        valid_addr_s;
   logic [2:0]  fsm_r;             // AHB to APB FSM Type
   logic        hready_r;          // AHB Transfer Done
-  logic        hresp_r;           // APB Response Error
   logic [11:0] paddr_r;           // APB Bus Address
+  logic        pwrite_r;          // APB Write Enable
   logic [31:0] pwdata_s;          // APB Data
   logic [31:0] pwdata_r;          // APB Data
   logic [31:0] prdata_s;          // APB Data
@@ -159,11 +160,13 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   logic        apb_slv3_sel_r;    // APB Slave Select
   logic        apb_slv5_sel_s;    // APB Slave Select
   logic        apb_slv5_sel_r;    // APB Slave Select
+  logic        irq_r;             // Level IRQ
 
   // ------------------------------------------------------
   // address decoding
   // ------------------------------------------------------
   always_comb begin: proc_addr_decaccess_proc
+    ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     valid_addr_s = 1'b0;
     apb_default_sel_s = 1'b0;
     apb_slv3_sel_s = 1'b0;
@@ -214,29 +217,27 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
     if (main_rst_an_i == 1'b0) begin
       fsm_r <= idle_st;
       hready_r <= 1'b1;
-      hresp_r <= apb_resp_okay_e;
       paddr_r <= 12'h000;
+      pwrite_r <= 1'b0;
       pwdata_r <= 32'h00000000;
       penable_r <= 1'b0;
       apb_default_sel_r <= 1'b0;
       apb_slv3_sel_r <= 1'b0;
       apb_slv5_sel_r <= 1'b0;
       prdata_r <= 32'h00000000;
-
+      irq_r <= 1'b0;
     end else begin
       case (fsm_r)
         idle_st: begin
-          if (ahb_slv_htrans_i != ahb_trans_idle_e) begin
-            hready_r <= 1'b0;
+          if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
             if (valid_addr_s == 1'b1) begin
+              hready_r <= 1'b0;
               paddr_r <= ahb_slv_haddr_i[11:0];
+              pwrite_r <= ahb_slv_hwrite_i;
               apb_default_sel_r <= apb_default_sel_s;
               apb_slv3_sel_r <= apb_slv3_sel_s;
               apb_slv5_sel_r <= apb_slv5_sel_s;
               fsm_r <= apb_ctrl_st;
-            end else begin
-              hresp_r <= apb_resp_error_e;
-              fsm_r <= ahb_err_st;
             end
           end
         end
@@ -255,25 +256,16 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
             apb_slv5_sel_r <= 1'b0;
             prdata_r <= prdata_s;
             if (ahb_slv_htrans_i == ahb_trans_busy_e) begin
-              if (pslverr_s == 1'b0) begin
-                fsm_r <= ahb_busy_finish_st;
-              end else begin
-                fsm_r <= ahb_busy_err_st;
-              end
+              fsm_r <= ahb_busy_finish_st;
             end else begin
-              if (pslverr_s == 1'b0) begin
-                hready_r <= 1'b1;
-                fsm_r <= ahb_finish_st;
-              end else begin
-                hresp_r <= apb_resp_error_e;
-                fsm_r <= ahb_err_st;
-              end
+              hready_r <= 1'b1;
+              fsm_r <= ahb_finish_st;
             end
           end
         end
 
         ahb_finish_st: begin
-          if (ahb_slv_htrans_i != ahb_trans_idle_e) begin
+          if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
             hready_r <= 1'b0;
             if (valid_addr_s == 1'b1) begin
               paddr_r <= ahb_slv_haddr_i[11:0];
@@ -286,31 +278,29 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
           end
         end
 
-        ahb_err_st: begin
-          hready_r <= 1'b1;
-          hresp_r <= apb_resp_okay_e;
-          fsm_r <= ahb_finish_st;
-        end
 
         ahb_busy_finish_st: begin
+          hresp_r <= apb_resp_okay_e;
           if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
             hready_r <= 1'b1;
             fsm_r <= ahb_finish_st;
           end
         end
 
-        ahb_busy_err_st: begin
-          if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
-            hresp_r <= apb_resp_error_e;
-            fsm_r <= ahb_err_st;
-          end
-        end
 
         default: begin
           hready_r <= 1'b1;
           fsm_r <= idle_st;
         end
       endcase
+
+      if ((fsm_r == idle_st) && (ahb_slv_htrans_i != ahb_trans_idle_e) && (valid_addr_s == 1'b0)) begin
+        irq_r <= 1'b1;
+      end else if ((fsm_r == apb_data_st) && (pready_s == 1'b1)) begin
+        irq_r <= pslverr_s;
+      end else begin
+        irq_r <= 1'b0;
+      end
     end
   end
 
@@ -318,6 +308,10 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   // ------------------------------------------------------
   // output Assignments
   // ------------------------------------------------------
+  assign ahb_slv_hreadyout_o = hready_r;
+  assign ahb_slv_hresp_o = apb_resp_okay_e;
+  assign ahb_slv_hrdata_o = prdata_r;
+
   assign pwdata_s = (fms_r == apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
 
   // Slave 'default':
@@ -338,6 +332,8 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   assign apb_slv_slv5_pwdata_o     = pwdata_s;
   assign apb_slv_slv5_penable_o    = penable_r;
   assign apb_slv_slv5_psel_o       = apb_slv5_sel_r;
+
+  assign irq_o = irq_r;
 
 
 endmodule // ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue
