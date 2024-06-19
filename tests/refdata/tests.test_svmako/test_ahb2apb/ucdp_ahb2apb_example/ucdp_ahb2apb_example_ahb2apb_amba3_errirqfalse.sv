@@ -243,7 +243,9 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
         end
 
         apb_ctrl_st: begin
-          pwdata_r <= ahb_slv_hwdata_i;
+          if (pwrite_r == 1'b1) begin
+            pwdata_r <= ahb_slv_hwdata_i;
+          end
           penable_r <= 1'b1;
           fsm_r <= apb_data_st;
         end

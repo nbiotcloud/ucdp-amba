@@ -43,7 +43,7 @@ def decode_casex(decoding_slice: u.Slice, addrspace: SlaveAddrspace):
 <%
   rslvr = usv.get_resolver(mod)
   nr_slv = len(mod.slaves)
-  rng_bits = [num.calc_unsigned_width(aspc.size - 1) for aspc in mod.addrmap]
+  rng_bits = [num.calc_lowest_bit_set(aspc.size) for aspc in mod.addrmap]
   dec_slice = u.Slice(left=mod.ahb_addrwidth-1, right=min(rng_bits))
   paddr_slice = u.Slice(width=max(rng_bits))
 
