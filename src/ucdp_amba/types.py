@@ -37,17 +37,9 @@ Mainly these types are needed:
 
 import ucdp as u
 
-
-class AuserType(u.UintType):
-    """
-    Address User Channel (AMBA5 Lite).
-    """
-
-    title: str = "Address User Channel"
-    comment: str = "Address User Channel"
-
-    def __init__(self, **kwargs):
-        super().__init__(width=4, **kwargs)
+LEGAL_AHB_DATA_WIDTH = [8, 16, 32, 64, 128, 256, 512, 1024]
+LEGAL_AHB_PROT_WIDTH = [0, 4, 7]
+LEGAL_APB_DATA_WIDTH = [8, 16, 32]
 
 
 class ASecIdType(u.AEnumType):
@@ -63,10 +55,45 @@ class ASecIdType(u.AEnumType):
         return self.new(filter_=lambda item: item.value not in excludes)
 
 
+class AuserType(u.UintType):
+    """
+    Address User Channel (AMBA5 Lite).
+    """
+
+    title: str = "Address User Channel"
+    comment: str = "Address User Channel"
+
+    def __init__(self, **kwargs):
+        super().__init__(width=4, **kwargs)
+
+
+class AhbProtType(u.UintType):
+    """AHB Protection."""
+
+    title: str = "AHB Transfer Protection"
+    comment: str = "AHB Transfer Protection"
+
+    def __init__(self, width=4, **kwargs):
+        super().__init__(width=width, **kwargs)
+
+
 class AmbaProto(u.AConfig):
     """Amba Protocol Version."""
 
     secidtype: ASecIdType | None = None
+    hprotwidth: int | None = 4
+
+    @property
+    def hprottype(self) -> AhbProtType | None:
+        """Protocol has HPROT signal."""
+        if self.hprotwidth:
+            if self.hprotwidth not in LEGAL_AHB_PROT_WIDTH:
+                raise ValueError(
+                    f"Illegal value for AHB hprotwidth: {self.hprotwidth}. Legal values are {LEGAL_AHB_PROT_WIDTH}"
+                )
+
+            return AhbProtType(width=self.hprotwidth)
+        return None
 
     @property
     def ausertype(self) -> AuserType | None:
@@ -90,8 +117,6 @@ class AmbaProto(u.AConfig):
 
 
 AMBA3 = AmbaProto(name="amba3")
-LEGAL_AHB_DATA_WIDTH = [8, 16, 32, 64, 128, 256, 512, 1024]
-LEGAL_APB_DATA_WIDTH = [8, 16, 32]
 
 
 class AhbMstType(u.AStructType):
@@ -169,6 +194,21 @@ class AhbMstType(u.AStructType):
     11
     >>> len(tuple(AhbMstType(proto=ahb5).cast(AhbSlvType(proto=ahb5))))
     12
+
+    Without HPROT:
+
+    >>> ahbp = AmbaProto("AHB3", hprotwidth=0)
+
+    >>> for item in AhbMstType(proto=ahbp).values(): item
+    StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
+    StructItem('haddr', AhbAddrType(32), doc=Doc(title='AHB Bus Address', ...))
+    StructItem('hwrite', AhbWriteType(), doc=Doc(title='AHB Write Enable', ...))
+    StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
+    StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
+    StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
+    StructItem('hready', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done', ...))
+    StructItem('hresp', AhbRespType(), orientation=BWD, doc=Doc(title='AHB Response Error', ...))
+    StructItem('hrdata', AhbDataType(32), orientation=BWD, doc=Doc(title='AHB Data', ...))
     """
 
     title: str = "AHB Master"
@@ -178,20 +218,16 @@ class AhbMstType(u.AStructType):
     datawidth: int = 32
 
     def _build(self):
-        if self.datawidth not in LEGAL_AHB_DATA_WIDTH:
-            raise ValueError(
-                f"Illegal value for AHB datawidth: {self.datawidth}. Legal values are {LEGAL_AHB_DATA_WIDTH}"
-            )
         # FWD
         self._add("htrans", AhbTransType())
         self._add("haddr", AhbAddrType(self.addrwidth))
-        ausertype = self.proto.ausertype
-        if ausertype:
+        if ausertype := self.proto.ausertype:
             self._add("hauser", ausertype, title="AHB Address User Channel")
         self._add("hwrite", AhbWriteType())
         self._add("hsize", AhbSizeType())
         self._add("hburst", AhbBurstType())
-        self._add("hprot", AhbProtType())
+        if self.proto.hprottype:
+            self._add("hprot", self.proto.hprottype)
         self._add("hwdata", AhbDataType(self.datawidth))
         # BWD
         self._add("hready", AhbReadyType(), u.BWD)
@@ -321,6 +357,25 @@ class AhbSlvType(u.AStructType):
     13
     >>> len(tuple(AhbSlvType(proto=ahb5).cast(AhbMstType(proto=ahb5))))
     14
+
+    With wider HPROT:
+
+    >>> ahbp = AmbaProto("AHB3", hprotwidth=7)
+
+    >>> for item in AhbSlvType(proto=ahbp).values(): item
+    StructItem('hsel', AhbSelType(), doc=Doc(title='AHB Slave Select', ...))
+    StructItem('haddr', AhbAddrType(32), doc=Doc(title='AHB Bus Address', ...))
+    StructItem('hwrite', AhbWriteType(), doc=Doc(title='AHB Write Enable', ...))
+    StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
+    StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
+    StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
+    StructItem('hprot', AhbProtType(7), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
+    StructItem('hready', AhbReadyType(), doc=Doc(title='AHB Transfer Done to Slave', ...))
+    StructItem('hreadyout', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done from Slave', ...))
+    StructItem('hresp', AhbRespType(), orientation=BWD, doc=Doc(title='AHB Response Error', ...))
+    StructItem('hrdata', AhbDataType(32), orientation=BWD, doc=Doc(title='AHB Data', ...))
+
     """
 
     title: str = "AHB Slave"
@@ -343,7 +398,8 @@ class AhbSlvType(u.AStructType):
         self._add("htrans", AhbTransType())
         self._add("hsize", AhbSizeType())
         self._add("hburst", AhbBurstType())
-        self._add("hprot", AhbProtType())
+        if self.proto.hprottype:
+            self._add("hprot", self.proto.hprottype)
         self._add("hwdata", AhbDataType(self.datawidth))
         title: str = "AHB Transfer Done to Slave"
         self._add("hready", AhbReadyType(), title=title, comment=title)
@@ -571,6 +627,8 @@ class AhbDataType(u.UintType):
     comment: str = "AHB Data"
 
     def __init__(self, width=32, **kwargs):
+        if width not in LEGAL_AHB_DATA_WIDTH:
+            raise ValueError(f"Illegal value for AHB datawidth: {width}. Legal values are {LEGAL_AHB_DATA_WIDTH}")
         super().__init__(width=width, **kwargs)
 
 
@@ -646,16 +704,6 @@ class AhbBurstType(u.AEnumType):
         self._add(5, "incr8", "8-beat incrementing burst")
         self._add(6, "wrap16", "16-beat wrapping burst")
         self._add(7, "incr16", "16-beat incrementing burst")
-
-
-class AhbProtType(u.UintType):
-    """AHB Protection."""
-
-    title: str = "AHB Transfer Protection"
-    comment: str = "AHB Transfer Protection"
-
-    def __init__(self, width=4, **kwargs):
-        super().__init__(width=width, **kwargs)
 
 
 class AhbWriteType(u.AEnumType):
@@ -757,6 +805,8 @@ class ApbDataType(u.UintType):
     comment: str = "APB Data"
 
     def __init__(self, width=32, **kwargs):
+        if width not in LEGAL_APB_DATA_WIDTH:
+            raise ValueError(f"Illegal value for APB datawidth: {width}. Legal values are {LEGAL_APB_DATA_WIDTH}")
         super().__init__(width=width, **kwargs)
 
 
