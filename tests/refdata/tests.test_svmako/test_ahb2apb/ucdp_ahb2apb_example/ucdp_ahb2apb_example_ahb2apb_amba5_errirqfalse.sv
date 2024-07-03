@@ -42,7 +42,7 @@
 //
 // =============================================================================
 
-`begin_keywords 1800-2009
+`begin_keywords "1800-2009"
 `default_nettype none
 
 module ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
