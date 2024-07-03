@@ -68,12 +68,28 @@ class AuserType(u.UintType):
 
 
 class AhbProtType(u.UintType):
-    """AHB Protection."""
+    """
+    AHB Protection.
+
+    >>> AhbProtType().width
+    4
+    >>> AhbProtType(width=7).width
+    7
+
+    Width is checked for legal values:
+
+    >>> t = AhbProtType(width=5)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for AHB hprotwidth: 5. Legal values are [0, 4, 7]
+    """
 
     title: str = "AHB Transfer Protection"
     comment: str = "AHB Transfer Protection"
 
     def __init__(self, width=4, **kwargs):
+        if width not in LEGAL_AHB_PROT_WIDTH:
+            raise ValueError(f"Illegal value for AHB hprotwidth: {width}. Legal values are {LEGAL_AHB_PROT_WIDTH}")
         super().__init__(width=width, **kwargs)
 
 
@@ -87,11 +103,6 @@ class AmbaProto(u.AConfig):
     def hprottype(self) -> AhbProtType | None:
         """Protocol has HPROT signal."""
         if self.hprotwidth:
-            if self.hprotwidth not in LEGAL_AHB_PROT_WIDTH:
-                raise ValueError(
-                    f"Illegal value for AHB hprotwidth: {self.hprotwidth}. Legal values are {LEGAL_AHB_PROT_WIDTH}"
-                )
-
             return AhbProtType(width=self.hprotwidth)
         return None
 
@@ -226,8 +237,8 @@ class AhbMstType(u.AStructType):
         self._add("hwrite", AhbWriteType())
         self._add("hsize", AhbSizeType())
         self._add("hburst", AhbBurstType())
-        if self.proto.hprottype:
-            self._add("hprot", self.proto.hprottype)
+        if hprottype := self.proto.hprottype:
+            self._add("hprot", hprottype)
         self._add("hwdata", AhbDataType(self.datawidth))
         # BWD
         self._add("hready", AhbReadyType(), u.BWD)
@@ -385,10 +396,6 @@ class AhbSlvType(u.AStructType):
     datawidth: int = 32
 
     def _build(self):
-        if self.datawidth not in LEGAL_AHB_DATA_WIDTH:
-            raise ValueError(
-                f"Illegal value for AHB datawidth: {self.datawidth}. Legal values are {LEGAL_AHB_DATA_WIDTH}"
-            )
         # FWD
         self._add("hsel", AhbSelType())
         self._add("haddr", AhbAddrType(self.addrwidth))
@@ -519,10 +526,6 @@ class ApbSlvType(u.AStructType):
     datawidth: int = 32
 
     def _build(self):
-        if self.datawidth not in LEGAL_APB_DATA_WIDTH:
-            raise ValueError(
-                f"Illegal value for APB datawidth: {self.datawidth}. Legal values are {LEGAL_APB_DATA_WIDTH}"
-            )
         # FWD
         self._add("paddr", ApbAddrType(self.addrwidth))
         if self.proto.ausertype:
@@ -621,6 +624,13 @@ class AhbDataType(u.UintType):
     32
     >>> AhbDataType(width=64).width
     64
+
+    Data width is checked for legal values:
+
+    >>> t = AhbDataType(width=57)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for AHB datawidth: 57. Legal values are [8, 16, 32, 64, 128, 256, 512, 1024]
     """
 
     title: str = "AHB Data"
@@ -795,10 +805,17 @@ class ApbDataType(u.UintType):
     """
     APB Data.
 
-    >>> AhbDataType().width
+    >>> ApbDataType().width
     32
-    >>> AhbDataType(width=64).width
-    64
+    >>> ApbDataType(width=16).width
+    16
+
+    Data width is checked for legal values:
+
+    >>> t = ApbDataType(width=18)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for APB datawidth: 18. Legal values are [8, 16, 32]
     """
 
     title: str = "APB Data"
@@ -868,9 +885,9 @@ class IdleType(u.AEnumType):
     """
     Bus Idle Type.
 
-    for item in IdleType().values(): item
-    EnumItem(0, 'busy', doc=Doc(title='Ongoing'))
-    EnumItem(1, 'done', doc=Doc(title='Done'))
+    >>> for item in IdleType().values(): item
+    EnumItem(0, 'busy', doc=Doc(title='Busy', comment='Transfers Ongoing'))
+    EnumItem(1, 'idle', doc=Doc(title='Idle'))
     """
 
     keytype: u.BitType = u.BitType(default=1)
