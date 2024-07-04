@@ -196,12 +196,12 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic        mst_ext_hready_s;
   logic        mst_ext_rqstate_s;
   logic        mst_ext_addr_err_s;
-  logic        mst_ext_misc_sel_s;
-  logic        mst_ext_misc_req_r;
-  logic        mst_ext_misc_gnt_r;
   logic        mst_ext_ram_sel_s;
   logic        mst_ext_ram_req_r;
   logic        mst_ext_ram_gnt_r;
+  logic        mst_ext_misc_sel_s;
+  logic        mst_ext_misc_req_r;
+  logic        mst_ext_misc_gnt_r;
   logic        mst_ext_gnt_s;
   logic [1:0]  mst_ext_htrans_s;     // AHB Transfer Type
   logic [1:0]  mst_ext_htrans_r;     // AHB Transfer Type
@@ -274,16 +274,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
 
     // Address Decoding
     mst_ext_addr_err_s = 1'b0;
-    mst_ext_misc_sel_s = 1'b0;
     mst_ext_ram_sel_s = 1'b0;
+    mst_ext_misc_sel_s = 1'b0;
 
     casex (ahb_mst_ext_haddr_i)
-      22'b100000000000000000xxxx, 22'b10000000000000000100xx, 22'b100000000000000001010x, 22'b1000000000000000010110, 22'b11110000000000100xxxxx: begin // misc
-        mst_ext_misc_sel_s = 1'b1;
-      end
-
       22'b1111000000000000xxxxxx: begin // ram
         mst_ext_ram_sel_s = 1'b1;
+      end
+
+      22'b100000000000000000xxxx, 22'b10000000000000000100xx, 22'b100000000000000001010x, 22'b1000000000000000010110, 22'b11110000000000100xxxxx: begin // misc
+        mst_ext_misc_sel_s = 1'b1;
       end
 
       default: begin
@@ -291,21 +291,21 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
     endcase
 
-    mst_ext_misc_req_s = (mst_ext_misc_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_misc_req_r;
     mst_ext_ram_req_s  = (mst_ext_ram_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_ram_req_r;
     mst_ext_ram_keep_s = mst_ext_ram_sel_s & mst_ext_cont_xfer_s;
+    mst_ext_misc_req_s = (mst_ext_misc_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_misc_req_r;
 
     // Grant Combination
-    mst_ext_gnt_s = slv_misc_ext_gnt_s |
-                    slv_ram_ext_gnt_s;
+    mst_ext_gnt_s = slv_ram_ext_gnt_s |
+                    slv_misc_ext_gnt_s;
   end
 
   // FSM for Master 'ext'
   always_ff @(posedge main_clk_i or negedge main_rst_an_i) begin: proc_ext_fsm
     if (main_rst_an_i == 1'b0) begin
       fsm_ext_r <= fsm_idle_st;
-      mst_ext_misc_gnt_r <= 1'b0;
       mst_ext_ram_gnt_r <= 1'b0;
+      mst_ext_misc_gnt_r <= 1'b0;
     end else begin
       case (fsm_ext_r)
         fsm_idle_st: begin
@@ -313,16 +313,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             if (mst_ext_addr_err_s == 1'b1) begin
               fsm_ext_r <= fsm_error_state1_st;
             end else if (mst_ext_gnt_s == 1'b1) begin
-              mst_ext_misc_req_r <= 1'b0;
               mst_ext_ram_req_r <= 1'b0;
+              mst_ext_misc_req_r <= 1'b0;
               fsm_ext_r <= fsm_transfer_st;
             end else begin
-              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               fsm_ext_r <= fsm_transfer_wait_st;
             end
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
           end
         end
 
@@ -341,16 +341,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             if (mst_ext_addr_err_s == 1'b1) begin
               fsm_ext_r <= fsm_error_state1_st;
             end else if (mst_ext_gnt_s == 1'b1) begin
-              mst_ext_misc_req_r <= 1'b0;
               mst_ext_ram_req_r <= 1'b0;
+              mst_ext_misc_req_r <= 1'b0;
               fsm_ext_r <= fsm_transfer_st;
             end else begin
-              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               fsm_ext_r <= fsm_transfer_wait_st;
             end
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
           end else begin
             fsm_ext_r <= fsm_idle_st;
           end
@@ -365,8 +365,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               if (mst_ext_hready_s == 1'b0) begin
                 fsm_ext_r <= fsm_transfer_finish_st;
               end else begin
-                mst_ext_misc_gnt_r <= 1'b0;
                 mst_ext_ram_gnt_r <= 1'b0;
+                mst_ext_misc_gnt_r <= 1'b0;
                 fsm_ext_r <= fsm_idle_st;
               end
             end else begin // ((ahb_mst_ext_htrans_i == ahb_trans_nonseq_e)
@@ -377,26 +377,26 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
                   fsm_ext_r <= fsm_error_state1_st;
                 end
               end else if (mst_ext_gnt_s == 1'b1) begin
-                mst_ext_misc_req_r <= 1'b0;
                 mst_ext_ram_req_r <= 1'b0;
+                mst_ext_misc_req_r <= 1'b0;
                 fsm_ext_r <= fsm_transfer_st;
               end else begin
-                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 fsm_ext_r <= fsm_transfer_wait_st;
               end
-              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
               mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             end
           end
         end
 
         fsm_transfer_wait_st: begin
           if (mst_ext_gnt_s == 1'b1) begin
-            mst_ext_misc_req_r <= 1'b0;
             mst_ext_ram_req_r <= 1'b0;
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+            mst_ext_misc_req_r <= 1'b0;
             mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             fsm_ext_r <= fsm_transfer_st;
           end
         end
@@ -407,29 +407,29 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               if (mst_ext_addr_err_s == 1'b1) begin
                 fsm_ext_r <= fsm_error_state1_st;
               end else if (mst_ext_gnt_s == 1'b1) begin
-                mst_ext_misc_req_r <= 1'b0;
                 mst_ext_ram_req_r <= 1'b0;
+                mst_ext_misc_req_r <= 1'b0;
                 fsm_ext_r <= fsm_transfer_st;
               end else begin
-                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 fsm_ext_r <= fsm_transfer_wait_st;
               end
-              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
               mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             end else begin
-              mst_ext_misc_gnt_r <= 1'b0;
               mst_ext_ram_gnt_r <= 1'b0;
+              mst_ext_misc_gnt_r <= 1'b0;
               fsm_ext_r <= fsm_idle_st;
             end
           end
         end
 
         default: begin
-          mst_ext_misc_gnt_r <= 1'b0;
-          mst_ext_misc_req_r <= 1'b0;
           mst_ext_ram_gnt_r <= 1'b0;
           mst_ext_ram_req_r <= 1'b0;
+          mst_ext_misc_gnt_r <= 1'b0;
+          mst_ext_misc_req_r <= 1'b0;
           fsm_ext_r <= fsm_idle_st;
         end
       endcase
@@ -463,9 +463,9 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       mst_ext_hprot_s  = ahb_mst_ext_hprot_i;
     end
 
-    mst_ext_hready_s = (ahb_slv_misc_hreadyout_i & mst_ext_misc_gnt_r) |
-                       (ahb_slv_ram_hreadyout_i & mst_ext_ram_gnt_r) |
-                       ~(|{mst_ext_misc_gnt_r, mst_ext_ram_gnt_r});
+    mst_ext_hready_s = (ahb_slv_ram_hreadyout_i & mst_ext_ram_gnt_r) |
+                       (ahb_slv_misc_hreadyout_i & mst_ext_misc_gnt_r) |
+                       ~(|{mst_ext_ram_gnt_r, mst_ext_misc_gnt_r});
 
     case (fsm_ext_r)
       fsm_transfer_wait_st: begin
@@ -487,17 +487,17 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
 
       fsm_error_state0_st, fsm_transfer_st: begin
-        case ({mst_ext_misc_gnt_r, mst_ext_ram_gnt_r})
+        case ({mst_ext_ram_gnt_r, mst_ext_misc_gnt_r})
           2'b01: begin
-            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
-            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
-            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
-          end
-
-          2'b10: begin
             ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
+          end
+
+          2'b10: begin
+            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
+            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
+            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
           end
 
           default: begin
@@ -509,17 +509,17 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
 
       fsm_transfer_finish_st: begin
-        case ({mst_ext_misc_gnt_r, mst_ext_ram_gnt_r})
+        case ({mst_ext_ram_gnt_r, mst_ext_misc_gnt_r})
           2'b01: begin
-            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
-            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
-            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
-          end
-
-          2'b10: begin
             ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
+          end
+
+          2'b10: begin
+            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
+            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
+            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
           end
 
           default: begin
