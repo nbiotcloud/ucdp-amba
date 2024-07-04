@@ -33,7 +33,7 @@
 //
 // =============================================================================
 
-`begin_keywords "1800-2009"
+`begin_keywords 1800-2009
 `default_nettype none
 
 module ucdp_apb2mem_example_a2m ( // ucdp_amba.ucdp_apb2mem.UcdpApb2memMod
