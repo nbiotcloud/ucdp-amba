@@ -5,14 +5,14 @@
 groups = ["default", "checktypes", "doc", "format", "test"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.2"
-content_hash = "sha256:9e83217d8519588bfff526f3a75015ed1155c44086289779f48166b39c0ee1d0"
+content_hash = "sha256:741d826eeec6554390b70d6c4d85851a2a067f9e83b33b04fd59f1a0d8e77024"
 
 [[package]]
 name = "aligntext"
 version = "1.0.0"
 requires_python = ">=3.7.2,<4.0.0"
 summary = "Text Align - Python Text Alignment"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "aligntext-1.0.0-py3-none-any.whl", hash = "sha256:af89542d395267ff5af0010414208f56b72f267e89ed05d1d5673b39ca917079"},
     {file = "aligntext-1.0.0.tar.gz", hash = "sha256:2e6a782697f75e60fe32b0afa2b45e00fa7a6045aeee1bd2f2cac517a3f3a4d7"},
@@ -23,7 +23,7 @@ name = "annotated-types"
 version = "0.7.0"
 requires_python = ">=3.8"
 summary = "Reusable constraint types to use with typing.Annotated"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
     {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
@@ -34,7 +34,7 @@ name = "anytree"
 version = "2.12.1"
 requires_python = ">=3.7.2,<4"
 summary = "Powerful and Lightweight Python Tree Data Structure with various plugins"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "six",
 ]
@@ -48,7 +48,7 @@ name = "attrs"
 version = "23.2.0"
 requires_python = ">=3.7"
 summary = "Classes Without Boilerplate"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "attrs-23.2.0-py3-none-any.whl", hash = "sha256:99b87a485a5820b23b879f04c2305b44b951b502fd64be915879d77a7e8fc6f1"},
     {file = "attrs-23.2.0.tar.gz", hash = "sha256:935dc3b529c262f6cf76e50877d35a4bd3c1de194fd41f47a2b7ae8f19971f30"},
@@ -93,7 +93,7 @@ files = [
 name = "case-converter"
 version = "1.1.0"
 summary = "A string case conversion package."
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "case-converter-1.1.0.tar.gz", hash = "sha256:2ed3fc6e3ffa8d601f9a31ffcbc8fbd19eaeb48671a79a8ef16394672824510e"},
     {file = "case_converter-1.1.0-py3-none-any.whl", hash = "sha256:d0fbc665a4fd410e454630bcf5168dce62e147a98512647ed48b0a6b556986e3"},
@@ -193,7 +193,7 @@ name = "click"
 version = "8.1.7"
 requires_python = ">=3.7"
 summary = "Composable command line interface toolkit"
-groups = ["default", "doc", "test"]
+groups = ["default", "doc"]
 dependencies = [
     "colorama; platform_system == \"Windows\"",
 ]
@@ -351,7 +351,7 @@ files = [
 name = "fuzzywuzzy"
 version = "0.18.0"
 summary = "Fuzzy string matching in python"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "fuzzywuzzy-0.18.0-py2.py3-none-any.whl", hash = "sha256:928244b28db720d1e0ee7587acf660ea49d7e4c632569cad4f1cd7e68a5f0993"},
     {file = "fuzzywuzzy-0.18.0.tar.gz", hash = "sha256:45016e92264780e58972dca1b3d939ac864b78437422beecebb3095f8efd00e8"},
@@ -389,7 +389,7 @@ name = "humanfriendly"
 version = "10.0"
 requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 summary = "Human friendly output for text interfaces using Python"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "pyreadline3; sys_platform == \"win32\" and python_version >= \"3.8\"",
 ]
@@ -403,7 +403,7 @@ name = "humannum"
 version = "1.0.0"
 requires_python = ">=3.7.2,<4.0.0"
 summary = "Human Friendly Numbers"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "humanfriendly<11.0,>=10.0",
 ]
@@ -417,7 +417,7 @@ name = "icdutil"
 version = "0.3.1"
 requires_python = ">=3.7.2,<4.0.0"
 summary = "IC Design Utilities"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "attrs<24.0.0,>=23.1.0",
     "humannum<2.0.0,>=1.0.0",
@@ -482,7 +482,7 @@ name = "levenshtein"
 version = "0.25.1"
 requires_python = ">=3.8"
 summary = "Python extension for computing string edit distances and similarities."
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "rapidfuzz<4.0.0,>=3.8.0",
 ]
@@ -553,7 +553,7 @@ name = "mako"
 version = "1.3.5"
 requires_python = ">=3.8"
 summary = "A super-fast templating language that borrows the best ideas from the existing templating languages."
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "MarkupSafe>=0.9.2",
 ]
@@ -567,7 +567,7 @@ name = "makolator"
 version = "2.7.0"
 requires_python = "<4.0.0,>=3.8.2"
 summary = "Extended Mako Templates for Python"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "aligntext<2.0.0,>=1.0.0",
     "attrs<24.0.0,>=23.1.0",
@@ -596,7 +596,7 @@ name = "markdown-it-py"
 version = "3.0.0"
 requires_python = ">=3.8"
 summary = "Python port of markdown-it. Markdown parsing, done right!"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "mdurl~=0.1",
 ]
@@ -610,7 +610,7 @@ name = "markupsafe"
 version = "2.1.5"
 requires_python = ">=3.7"
 summary = "Safely add untrusted strings to HTML/XML markup."
-groups = ["default", "doc", "test"]
+groups = ["default", "doc"]
 files = [
     {file = "MarkupSafe-2.1.5-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:a17a92de5231666cfbe003f0e4b9b3a7ae3afb1ec2845aadc2bacc93ff85febc"},
     {file = "MarkupSafe-2.1.5-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:72b6be590cc35924b02c78ef34b467da4ba07e4e0f0454a2c5907f473fc50ce5"},
@@ -650,7 +650,7 @@ name = "matchor"
 version = "0.1.0"
 requires_python = ">=3.7.2,<4.0.0"
 summary = "Extended Pattern Matching"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "matchor-0.1.0-py3-none-any.whl", hash = "sha256:5e4318657bfaff5cddc6fe11b20d9c990f07407c1f5d19d3bfd16016c4ad9437"},
     {file = "matchor-0.1.0.tar.gz", hash = "sha256:6437850f63cf943cfa7b3aa38ead7e6e36faaedbd5cb8a389f9b13f4d366ffb4"},
@@ -661,7 +661,7 @@ name = "mdurl"
 version = "0.1.2"
 requires_python = ">=3.7"
 summary = "Markdown URL utilities"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
@@ -671,7 +671,7 @@ files = [
 name = "mementos"
 version = "1.3.1"
 summary = "Memoizing metaclass. Drop-dead simple way to create cached objects"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "mementos-1.3.1-py2.py3-none-any.whl", hash = "sha256:fee20b2440a06657bb942b8d935f0c3d468b5ad58b07b33b609fd92fe864bc7f"},
     {file = "mementos-1.3.1.zip", hash = "sha256:e3574b3d16a1b3cbfd03e049701bedcfcff131ea5f93904563672221109f53e7"},
@@ -919,7 +919,7 @@ name = "outputfile"
 version = "0.2.1"
 requires_python = ">=3.7.2,<4.0.0"
 summary = "Timestamp Preserving Output File Writer"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "outputfile-0.2.1-py3-none-any.whl", hash = "sha256:0b8b6efe7bf8709588d21de69e73eb94f18ae017661ca3e03166c1320c5fc84d"},
     {file = "outputfile-0.2.1.tar.gz", hash = "sha256:ce251561ede6bcdeb5f88465a46e14beced4f7201b0b8c26aa0ac9b887cda167"},
@@ -1001,7 +1001,7 @@ name = "pydantic"
 version = "2.7.4"
 requires_python = ">=3.8"
 summary = "Data validation using Python type hints"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "annotated-types>=0.4.0",
     "pydantic-core==2.18.4",
@@ -1017,7 +1017,7 @@ name = "pydantic-core"
 version = "2.18.4"
 requires_python = ">=3.8"
 summary = "Core functionality for Pydantic validation and serialization"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "typing-extensions!=4.7.0,>=4.6.0",
 ]
@@ -1084,7 +1084,7 @@ name = "pygments"
 version = "2.18.0"
 requires_python = ">=3.8"
 summary = "Pygments is a syntax highlighting package written in Python."
-groups = ["default", "doc", "test"]
+groups = ["default", "doc"]
 files = [
     {file = "pygments-2.18.0-py3-none-any.whl", hash = "sha256:b8e6aca0523f3ab76fee51799c488e38782ac06eafcf95e7ba832985c8e7b13a"},
     {file = "pygments-2.18.0.tar.gz", hash = "sha256:786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199"},
@@ -1109,7 +1109,7 @@ files = [
 name = "pyreadline3"
 version = "3.4.1"
 summary = "A python implementation of GNU readline."
-groups = ["default", "test"]
+groups = ["default"]
 marker = "sys_platform == \"win32\" and python_version >= \"3.8\""
 files = [
     {file = "pyreadline3-3.4.1-py3-none-any.whl", hash = "sha256:b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb"},
@@ -1169,7 +1169,7 @@ name = "python-levenshtein"
 version = "0.25.1"
 requires_python = ">=3.8"
 summary = "Python extension for computing string edit distances and similarities."
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "Levenshtein==0.25.1",
 ]
@@ -1230,7 +1230,7 @@ name = "rapidfuzz"
 version = "3.9.3"
 requires_python = ">=3.8"
 summary = "rapid fuzzy string matching"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "rapidfuzz-3.9.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bdb8c5b8e29238ec80727c2ba3b301efd45aa30c6a7001123a6647b8e6f77ea4"},
     {file = "rapidfuzz-3.9.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b3bd0d9632088c63a241f217742b1cf86e2e8ae573e01354775bd5016d12138c"},
@@ -1376,7 +1376,7 @@ name = "rich"
 version = "13.7.1"
 requires_python = ">=3.7.0"
 summary = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "markdown-it-py>=2.2.0",
     "pygments<3.0.0,>=2.13.0",
@@ -1391,7 +1391,7 @@ name = "six"
 version = "1.16.0"
 requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 summary = "Python 2 and 3 compatibility utilities"
-groups = ["default", "doc", "test"]
+groups = ["default", "doc"]
 files = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
@@ -1402,7 +1402,7 @@ name = "tabulate"
 version = "0.9.0"
 requires_python = ">=3.7"
 summary = "Pretty-print tabular data"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"},
     {file = "tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c"},
@@ -1439,7 +1439,7 @@ name = "types-tabulate"
 version = "0.9.0.20240106"
 requires_python = ">=3.8"
 summary = "Typing stubs for tabulate"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "types-tabulate-0.9.0.20240106.tar.gz", hash = "sha256:c9b6db10dd7fcf55bd1712dd3537f86ddce72a08fd62bb1af4338c7096ce947e"},
     {file = "types_tabulate-0.9.0.20240106-py3-none-any.whl", hash = "sha256:0378b7b6fe0ccb4986299496d027a6d4c218298ecad67199bbd0e2d7e9d335a1"},
@@ -1450,7 +1450,7 @@ name = "typing-extensions"
 version = "4.12.2"
 requires_python = ">=3.8"
 summary = "Backported and Experimental Type Hints for Python 3.8+"
-groups = ["checktypes", "default", "test"]
+groups = ["checktypes", "default"]
 files = [
     {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
     {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
@@ -1461,7 +1461,7 @@ name = "ucdp"
 version = "0.6.1"
 requires_python = "<4.0,>=3.10.0"
 summary = "Unified Chip Design Platform"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "anytree>=2.12.1",
     "case-converter>=1.1.0",
@@ -1483,7 +1483,7 @@ files = [
 
 [[package]]
 name = "ucdp-glbl"
-version = "0.5.0"
+version = "0.6.0"
 requires_python = "<4.0,>=3.10.0"
 summary = "Unified Chip Design Platform - Global"
 groups = ["default"]
@@ -1491,8 +1491,8 @@ dependencies = [
     "ucdp>=0.6.0",
 ]
 files = [
-    {file = "ucdp_glbl-0.5.0-py3-none-any.whl", hash = "sha256:d9ebc293e3e55af5496b9809b5706a7633a4dcaebd1e86db5c4c6740f9936862"},
-    {file = "ucdp_glbl-0.5.0.tar.gz", hash = "sha256:63fff7a72b6da2c996f53d6dc3e068bbbb24c842d495abb171eb942d118ae922"},
+    {file = "ucdp_glbl-0.6.0-py3-none-any.whl", hash = "sha256:b89786280df5f8dd98a34452b6fc30dfe0a3faf4424abd61037fc2199ed9e241"},
+    {file = "ucdp_glbl-0.6.0.tar.gz", hash = "sha256:f900f622eb6091d2838a99c47451a19ed6563ff01721c5b238cd0ce676e2f8c6"},
 ]
 
 [[package]]
@@ -1500,7 +1500,7 @@ name = "ucdp-sv"
 version = "0.5.1"
 requires_python = "<4.0,>=3.10.0"
 summary = "Unified Chip Design Platform"
-groups = ["default", "test"]
+groups = ["default"]
 dependencies = [
     "aligntext>=1.0.0",
     "ucdp>=0.6.0",
@@ -1515,7 +1515,7 @@ name = "uniquer"
 version = "1.0.2"
 requires_python = ">=3.7.2,<4.0.0"
 summary = "Unique Iteration"
-groups = ["default", "test"]
+groups = ["default"]
 files = [
     {file = "uniquer-1.0.2-py3-none-any.whl", hash = "sha256:cbe21179ed599a2d995144d860285fe39d1b5bb585e0ba563bbf418c6f8fbaac"},
     {file = "uniquer-1.0.2.tar.gz", hash = "sha256:308c828eb68f29549592fdb9df1cf82e4f84c40bd4312e79ca54d0d034af8a43"},
