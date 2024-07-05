@@ -5,7 +5,7 @@
 groups = ["default", "checktypes", "doc", "format", "test"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:b15707d95eec783a9d683b6400bdff7de84cc2abdb6d4f3fce2315e4ea97ad8c"
+content_hash = "sha256:612a8023263cec5c44eea856a869ec59901f1383bb78733d1b2865cb8e00c31f"
 
 [[package]]
 name = "aligntext"
@@ -1498,16 +1498,13 @@ files = [
 [[package]]
 name = "ucdp-sv"
 version = "0.4.0"
-requires_python = "<4.0,>=3.10.0"
+requires_python = ">=3.10.0,<4.0"
+path = "../ucdp-sv"
 summary = "Unified Chip Design Platform"
-groups = ["test"]
+groups = ["default", "test"]
 dependencies = [
     "aligntext>=1.0.0",
     "ucdp>=0.6.0",
-]
-files = [
-    {file = "ucdp_sv-0.4.0-py3-none-any.whl", hash = "sha256:9d8a1e70dc1e7063c7ae70ee0a5c4e4beb68cf928de86b2d1ca1a6d4019556b0"},
-    {file = "ucdp_sv-0.4.0.tar.gz", hash = "sha256:8204c26615bdbf1aa627ce21eeb56a682dd20770dfde718e58886f4a5f52514b"},
 ]
 
 [[package]]
