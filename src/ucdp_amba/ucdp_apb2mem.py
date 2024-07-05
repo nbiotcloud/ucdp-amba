@@ -26,9 +26,11 @@
 Unified Chip Design Platform - AMBA - APB2MEM.
 """
 
-import ucdp as u
 from typing import ClassVar
+
+import ucdp as u
 from ucdp_glbl.mem import MemIoType
+
 from . import types as t
 
 
@@ -52,14 +54,23 @@ class UcdpApb2memMod(u.ATailoredMod):
     )
 
     def _build(self):
-        self.add_port(t.ApbSlvType(proto=self.proto, addrwidth=self.addrwidth, datawidth=self.datawidth), "apb_slv_i", title="APB Slave Input")
-        self.add_port(MemIoType(addrwidth=self.addrwidth-2, datawidth=self.datawidth, writable=True, err=True), "mem_o", title="Memory Interface")
+        self.add_port(
+            t.ApbSlvType(proto=self.proto, addrwidth=self.addrwidth, datawidth=self.datawidth),
+            "apb_slv_i",
+            title="APB Slave Input",
+        )
+        self.add_port(
+            MemIoType(addrwidth=self.addrwidth - 2, datawidth=self.datawidth, writable=True, err=True),
+            "mem_o",
+            title="Memory Interface",
+        )
 
     @staticmethod
     def build_top(**kwargs):
         """Build example top module and return it."""
         return UcdpApb2MemExampleMod()
-    
+
+
 class UcdpApb2MemExampleMod(u.AMod):
     """Example Converter."""
 

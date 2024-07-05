@@ -196,12 +196,12 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic        mst_ext_hready_s;
   logic        mst_ext_rqstate_s;
   logic        mst_ext_addr_err_s;
-  logic        mst_ext_misc_sel_s;
-  logic        mst_ext_misc_req_r;
-  logic        mst_ext_misc_gnt_r;
   logic        mst_ext_ram_sel_s;
   logic        mst_ext_ram_req_r;
   logic        mst_ext_ram_gnt_r;
+  logic        mst_ext_misc_sel_s;
+  logic        mst_ext_misc_req_r;
+  logic        mst_ext_misc_gnt_r;
   logic        mst_ext_gnt_s;
   logic [1:0]  mst_ext_htrans_s;     // AHB Transfer Type
   logic [1:0]  mst_ext_htrans_r;     // AHB Transfer Type
@@ -240,16 +240,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic [2:0]  mst_dsp_hburst_r;     // AHB Burst Type
   logic [3:0]  mst_dsp_hprot_s;      // AHB Transfer Protection
   logic [3:0]  mst_dsp_hprot_r;      // AHB Transfer Protection
-  logic        mst_dsp_ram_req_s;
-  logic        mst_dsp_ram_keep_s;
-  logic        slv_ram_dsp_gnt_r;
-  logic        slv_ram_dsp_gnt_s;
-  logic        slv_ram_dsp_sel_s;
   logic        mst_ext_ram_req_s;
   logic        mst_ext_ram_keep_s;
   logic        slv_ram_ext_gnt_r;
   logic        slv_ram_ext_gnt_s;
   logic        slv_ram_ext_sel_s;
+  logic        mst_dsp_ram_req_s;
+  logic        mst_dsp_ram_keep_s;
+  logic        slv_ram_dsp_gnt_r;
+  logic        slv_ram_dsp_gnt_s;
+  logic        slv_ram_dsp_sel_s;
   logic        mst_dsp_periph_req_s;
   logic        slv_periph_dsp_gnt_s;
   logic        slv_periph_dsp_sel_s;
@@ -274,16 +274,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
 
     // Address Decoding
     mst_ext_addr_err_s = 1'b0;
-    mst_ext_misc_sel_s = 1'b0;
     mst_ext_ram_sel_s = 1'b0;
+    mst_ext_misc_sel_s = 1'b0;
 
     casex (ahb_mst_ext_haddr_i)
-      22'b100000000000000000xxxx, 22'b10000000000000000100xx, 22'b100000000000000001010x, 22'b1000000000000000010110, 22'b11110000000000100xxxxx: begin // misc
-        mst_ext_misc_sel_s = 1'b1;
-      end
-
       22'b1111000000000000xxxxxx: begin // ram
         mst_ext_ram_sel_s = 1'b1;
+      end
+
+      22'b100000000000000000xxxx, 22'b10000000000000000100xx, 22'b100000000000000001010x, 22'b1000000000000000010110, 22'b11110000000000100xxxxx: begin // misc
+        mst_ext_misc_sel_s = 1'b1;
       end
 
       default: begin
@@ -291,21 +291,21 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
     endcase
 
-    mst_ext_misc_req_s = (mst_ext_misc_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_misc_req_r;
     mst_ext_ram_req_s  = (mst_ext_ram_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_ram_req_r;
     mst_ext_ram_keep_s = mst_ext_ram_sel_s & mst_ext_cont_xfer_s;
+    mst_ext_misc_req_s = (mst_ext_misc_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_misc_req_r;
 
     // Grant Combination
-    mst_ext_gnt_s = slv_misc_ext_gnt_s |
-                    slv_ram_ext_gnt_s;
+    mst_ext_gnt_s = slv_ram_ext_gnt_s |
+                    slv_misc_ext_gnt_s;
   end
 
   // FSM for Master 'ext'
   always_ff @(posedge main_clk_i or negedge main_rst_an_i) begin: proc_ext_fsm
     if (main_rst_an_i == 1'b0) begin
       fsm_ext_r <= fsm_idle_st;
-      mst_ext_misc_gnt_r <= 1'b0;
       mst_ext_ram_gnt_r <= 1'b0;
+      mst_ext_misc_gnt_r <= 1'b0;
     end else begin
       case (fsm_ext_r)
         fsm_idle_st: begin
@@ -313,16 +313,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             if (mst_ext_addr_err_s == 1'b1) begin
               fsm_ext_r <= fsm_error_state1_st;
             end else if (mst_ext_gnt_s == 1'b1) begin
-              mst_ext_misc_req_r <= 1'b0;
               mst_ext_ram_req_r <= 1'b0;
+              mst_ext_misc_req_r <= 1'b0;
               fsm_ext_r <= fsm_transfer_st;
             end else begin
-              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               fsm_ext_r <= fsm_transfer_wait_st;
             end
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
           end
         end
 
@@ -341,16 +341,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             if (mst_ext_addr_err_s == 1'b1) begin
               fsm_ext_r <= fsm_error_state1_st;
             end else if (mst_ext_gnt_s == 1'b1) begin
-              mst_ext_misc_req_r <= 1'b0;
               mst_ext_ram_req_r <= 1'b0;
+              mst_ext_misc_req_r <= 1'b0;
               fsm_ext_r <= fsm_transfer_st;
             end else begin
-              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+              mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               fsm_ext_r <= fsm_transfer_wait_st;
             end
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
           end else begin
             fsm_ext_r <= fsm_idle_st;
           end
@@ -365,8 +365,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               if (mst_ext_hready_s == 1'b0) begin
                 fsm_ext_r <= fsm_transfer_finish_st;
               end else begin
-                mst_ext_misc_gnt_r <= 1'b0;
                 mst_ext_ram_gnt_r <= 1'b0;
+                mst_ext_misc_gnt_r <= 1'b0;
                 fsm_ext_r <= fsm_idle_st;
               end
             end else begin // ((ahb_mst_ext_htrans_i == ahb_trans_nonseq_e)
@@ -377,26 +377,26 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
                   fsm_ext_r <= fsm_error_state1_st;
                 end
               end else if (mst_ext_gnt_s == 1'b1) begin
-                mst_ext_misc_req_r <= 1'b0;
                 mst_ext_ram_req_r <= 1'b0;
+                mst_ext_misc_req_r <= 1'b0;
                 fsm_ext_r <= fsm_transfer_st;
               end else begin
-                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 fsm_ext_r <= fsm_transfer_wait_st;
               end
-              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
               mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             end
           end
         end
 
         fsm_transfer_wait_st: begin
           if (mst_ext_gnt_s == 1'b1) begin
-            mst_ext_misc_req_r <= 1'b0;
             mst_ext_ram_req_r <= 1'b0;
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+            mst_ext_misc_req_r <= 1'b0;
             mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             fsm_ext_r <= fsm_transfer_st;
           end
         end
@@ -407,29 +407,29 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               if (mst_ext_addr_err_s == 1'b1) begin
                 fsm_ext_r <= fsm_error_state1_st;
               end else if (mst_ext_gnt_s == 1'b1) begin
-                mst_ext_misc_req_r <= 1'b0;
                 mst_ext_ram_req_r <= 1'b0;
+                mst_ext_misc_req_r <= 1'b0;
                 fsm_ext_r <= fsm_transfer_st;
               end else begin
-                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 mst_ext_ram_req_r <= mst_ext_ram_sel_s;
+                mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 fsm_ext_r <= fsm_transfer_wait_st;
               end
-              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
               mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
+              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
             end else begin
-              mst_ext_misc_gnt_r <= 1'b0;
               mst_ext_ram_gnt_r <= 1'b0;
+              mst_ext_misc_gnt_r <= 1'b0;
               fsm_ext_r <= fsm_idle_st;
             end
           end
         end
 
         default: begin
-          mst_ext_misc_gnt_r <= 1'b0;
-          mst_ext_misc_req_r <= 1'b0;
           mst_ext_ram_gnt_r <= 1'b0;
           mst_ext_ram_req_r <= 1'b0;
+          mst_ext_misc_gnt_r <= 1'b0;
+          mst_ext_misc_req_r <= 1'b0;
           fsm_ext_r <= fsm_idle_st;
         end
       endcase
@@ -463,9 +463,9 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       mst_ext_hprot_s  = ahb_mst_ext_hprot_i;
     end
 
-    mst_ext_hready_s = (ahb_slv_misc_hreadyout_i & mst_ext_misc_gnt_r) |
-                       (ahb_slv_ram_hreadyout_i & mst_ext_ram_gnt_r) |
-                       ~(|{mst_ext_misc_gnt_r, mst_ext_ram_gnt_r});
+    mst_ext_hready_s = (ahb_slv_ram_hreadyout_i & mst_ext_ram_gnt_r) |
+                       (ahb_slv_misc_hreadyout_i & mst_ext_misc_gnt_r) |
+                       ~(|{mst_ext_ram_gnt_r, mst_ext_misc_gnt_r});
 
     case (fsm_ext_r)
       fsm_transfer_wait_st: begin
@@ -487,17 +487,17 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
 
       fsm_error_state0_st, fsm_transfer_st: begin
-        case ({mst_ext_misc_gnt_r, mst_ext_ram_gnt_r})
+        case ({mst_ext_ram_gnt_r, mst_ext_misc_gnt_r})
           2'b01: begin
-            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
-            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
-            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
-          end
-
-          2'b10: begin
             ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
+          end
+
+          2'b10: begin
+            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
+            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
+            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
           end
 
           default: begin
@@ -509,17 +509,17 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
 
       fsm_transfer_finish_st: begin
-        case ({mst_ext_misc_gnt_r, mst_ext_ram_gnt_r})
+        case ({mst_ext_ram_gnt_r, mst_ext_misc_gnt_r})
           2'b01: begin
-            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
-            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
-            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
-          end
-
-          2'b10: begin
             ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
+          end
+
+          2'b10: begin
+            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
+            ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
+            ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
           end
 
           default: begin
@@ -828,9 +828,9 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     logic [1:0] next_grant_s;
     logic arb_en_s;
 
-    slv_req_s = {mst_dsp_ram_req_s, mst_ext_ram_req_s};
-    prev_grant_s = {slv_ram_dsp_gnt_r, slv_ram_ext_gnt_r};
-    arb_en_s = ~(mst_dsp_ram_keep_s | mst_ext_ram_keep_s);
+    slv_req_s = {mst_ext_ram_req_s, mst_dsp_ram_req_s};
+    prev_grant_s = {slv_ram_ext_gnt_r, slv_ram_dsp_gnt_r};
+    arb_en_s = ~(mst_ext_ram_keep_s | mst_dsp_ram_keep_s);
 
     next_grant_s = {prev_grant_s[0:0], prev_grant_s[1]}; // 1st candidate is old grant rotated 1 left
     for (i=0; i<2; i=i+1) begin
@@ -843,18 +843,18 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
     end
 
-    {slv_ram_dsp_gnt_s, slv_ram_ext_gnt_s} = slv_req_s & next_grant_s & {2{(ahb_slv_ram_hreadyout_i & arb_en_s)}};
+    {slv_ram_ext_gnt_s, slv_ram_dsp_gnt_s} = slv_req_s & next_grant_s & {2{(ahb_slv_ram_hreadyout_i & arb_en_s)}};
   end
 
 
   always_ff @(posedge main_clk_i or negedge main_rst_an_i) begin: proc_ram_gnt
     if (main_rst_an_i == 1'b0) begin
-      slv_ram_dsp_gnt_r <= 1'b1;  // initial pseudo-grant
-      slv_ram_ext_gnt_r <= 1'b0;
+      slv_ram_ext_gnt_r <= 1'b1;  // initial pseudo-grant
+      slv_ram_dsp_gnt_r <= 1'b0;
     end else begin
-      if ({slv_ram_dsp_gnt_s, slv_ram_ext_gnt_s} != 2'd0) begin
-        slv_ram_dsp_gnt_r <= ram_2_dsp_gnt_s;
+      if ({slv_ram_ext_gnt_s, slv_ram_dsp_gnt_s} != 2'd0) begin
         slv_ram_ext_gnt_r <= ram_2_ext_gnt_s;
+        slv_ram_dsp_gnt_r <= ram_2_dsp_gnt_s;
       end
     end
   end
@@ -862,25 +862,15 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
 
   // Slave 'ram' multiplexer
   always_comb begin: proc_ram_mux
-      slv_ram_dsp_sel_s = slv_ram_dsp_gnt_s |
-                          (mst_dsp_ram_keep_s & mst_dsp_ram_gnt_r);
       slv_ram_ext_sel_s = slv_ram_ext_gnt_s |
                           (mst_ext_ram_keep_s & mst_ext_ram_gnt_r);
+      slv_ram_dsp_sel_s = slv_ram_dsp_gnt_s |
+                          (mst_dsp_ram_keep_s & mst_dsp_ram_gnt_r);
 
-    ahb_slv_ram_hsel_o = |{slv_ram_dsp_sel_s, slv_ram_ext_sel_s};
+    ahb_slv_ram_hsel_o = |{slv_ram_ext_sel_s, slv_ram_dsp_sel_s};
 
-    case ({slv_ram_dsp_sel_s, slv_ram_ext_sel_s})  // address phase signals
+    case ({slv_ram_ext_sel_s, slv_ram_dsp_sel_s})  // address phase signals
       2'b01: begin
-        ahb_slv_ram_haddr_o  = mst_ext_haddr_s;
-        ahb_slv_ram_hwrite_o = mst_ext_hwrite_s;
-        ahb_slv_ram_hburst_o = mst_ext_hburst_s;
-        ahb_slv_ram_hsize_o  = mst_ext_hsize_s;
-        ahb_slv_ram_htrans_o = mst_ext_htrans_s;
-        ahb_slv_ram_hprot_o  = mst_ext_hprot_s;
-        ahb_slv_ram_hready_o = mst_ext_hready_s;
-      end
-
-      2'b10: begin
         ahb_slv_ram_haddr_o  = mst_dsp_haddr_s;
         ahb_slv_ram_hwrite_o = mst_dsp_hwrite_s;
         ahb_slv_ram_hburst_o = mst_dsp_hburst_s;
@@ -888,6 +878,16 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_slv_ram_htrans_o = mst_dsp_htrans_s;
         ahb_slv_ram_hprot_o  = mst_dsp_hprot_s;
         ahb_slv_ram_hready_o = mst_dsp_hready_s;
+      end
+
+      2'b10: begin
+        ahb_slv_ram_haddr_o  = mst_ext_haddr_s;
+        ahb_slv_ram_hwrite_o = mst_ext_hwrite_s;
+        ahb_slv_ram_hburst_o = mst_ext_hburst_s;
+        ahb_slv_ram_hsize_o  = mst_ext_hsize_s;
+        ahb_slv_ram_htrans_o = mst_ext_htrans_s;
+        ahb_slv_ram_hprot_o  = mst_ext_hprot_s;
+        ahb_slv_ram_hready_o = mst_ext_hready_s;
       end
 
       default: begin
@@ -901,13 +901,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
     endcase
 
-    case ({mst_dsp_ram_gnt_r, mst_ext_ram_gnt_r})  // data phase signals
+    case ({mst_ext_ram_gnt_r, mst_dsp_ram_gnt_r})  // data phase signals
       2'b01: begin
-        ahb_slv_ram_hwdata_o = ahb_mst_ext_hwdata_i;
+        ahb_slv_ram_hwdata_o = ahb_mst_dsp_hwdata_i;
       end
 
       2'b10: begin
-        ahb_slv_ram_hwdata_o = ahb_mst_dsp_hwdata_i;
+        ahb_slv_ram_hwdata_o = ahb_mst_ext_hwdata_i;
       end
 
       default: begin
