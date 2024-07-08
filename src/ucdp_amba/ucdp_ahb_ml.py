@@ -176,7 +176,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
         self.add_type_consts(t.AhbWriteType())
         self.add_type_consts(AhbFsmMlType(), name="fsm", item_suffix="st")
         for master in self.masters:
-            master_slaves = list(self._master_slaves[master.name])
+            master_slaves = self._master_slaves[master.name]
             self.add_signal(AhbFsmMlType(), f"fsm_{master.name}_r", comment=f"Master {master.name!r} FSM")
             self.add_signal(u.BitType(), f"mst_{master.name}_new_xfer_s")
             self.add_signal(u.BitType(), f"mst_{master.name}_cont_xfer_s")
@@ -196,7 +196,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
                 self.add_signal(subt.type_, f"mst_{master.name}_{subt.name}_s")
                 self.add_signal(subt.type_, f"mst_{master.name}_{subt.name}_r")
         for slave in self.slaves:
-            slave_masters = list(self._slave_masters[slave.name])
+            slave_masters = self._slave_masters[slave.name]
             num_mst = len(slave_masters)
             for master in slave_masters:
                 self.add_signal(u.BitType(), f"mst_{master}_{slave.name}_req_s")
