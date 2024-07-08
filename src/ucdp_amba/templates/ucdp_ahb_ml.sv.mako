@@ -75,7 +75,7 @@ ${parent.logic(indent=indent, skip=skip)}
   // ------------------------------------------------------
 % for master in mod.masters:
 <%
-  master_slaves = list(mod._master_slaves[master.name])
+  master_slaves = mod._master_slaves[master.name]
   num_slaves = len(master_slaves)
   if num_slaves == 1:
     sole_slv = master_slaves[0]
@@ -420,7 +420,7 @@ ${reqkeep.get()}
   // ------------------------------------------------------
 % for slave in mod.slaves:
 <%
-  slave_masters = list(mod._slave_masters[slave.name])
+  slave_masters = mod._slave_masters[slave.name]
   slave_port = mod.ports[f"ahb_slv_{slave.name}_o"]
   num_masters = len(slave_masters)
   if num_masters == 1:
