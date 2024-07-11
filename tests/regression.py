@@ -23,19 +23,19 @@
 #
 """Simulate generated System Verilog using CocoTB and verilator."""
 
-from cocotb_test.simulator import run
-import pytest
-import subprocess
 import os
 
+import pytest
+from cocotb_test.simulator import run
+
 # fixed seed for reproduceability
-SEED=161411072024
+SEED = 161411072024
 
 os.environ["SIM"] = "verilator"
 if not os.getenv("COCOTB_REDUCED_LOG_FMT"):
     os.environ["COCOTB_REDUCED_LOG_FMT"] = "1"
 
-os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV") + "/../../"
+os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV", "") + "/../../"
 
 ml_fl = [
     "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb_ml/ucdp_ahb_ml_example/ucdp_ahb_ml_example_ml.sv",
@@ -62,8 +62,10 @@ tests = [
     ("compile_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
 ]
 
+
 @pytest.mark.parametrize("test", tests, ids=[f"{t[1]}:{t[0]}" for t in tests])
 def test_generic(test):
+    """Generic, parametrized test runner."""
     # print(os.getcwd())
     # print(os.environ)
     top = test[1]
@@ -75,5 +77,5 @@ def test_generic(test):
         workdir=f"sim_run_{top}_{test}",
         timescale="1ns/1ps",
         seed=SEED,
-        gui=os.getenv("GUI", False)
+        gui=os.getenv("GUI", ""),
     )

@@ -13,5 +13,3 @@
 .DS_Store
 tests/sim_build*/**
 **/.coverage
-
-
