@@ -106,6 +106,15 @@ def dev(session: nox.Session) -> None:
         session.run(*session.posargs, external=True)
 
 
+@nox.session()
+def test_rtl(session: nox.Session) -> None:
+    """Run RTL Tests - Additional Arguments are forwarded to `pytest`."""
+    _init(session)
+    session.run_always("pdm", "install", "-G", ":all")
+    with session.chdir("tests"):
+        session.run("pytest", "-vv", "regression.py", *session.posargs)
+
+
 def _init(session: nox.Session):
     session.install("pdm")
     lockfile = pathlib.Path("pdm.lock")
