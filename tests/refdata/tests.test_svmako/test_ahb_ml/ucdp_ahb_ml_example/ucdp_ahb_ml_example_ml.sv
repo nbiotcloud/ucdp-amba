@@ -270,7 +270,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     mst_ext_rqstate_s   = ((fsm_ext_r == fsm_idle_st) ||
                            (fsm_ext_r == fsm_transfer_st) ||
                            (fsm_ext_r == fsm_transfer_finish_st) ||
-                           (fsm_ext_r == fsm_error_state2_st)) ? 1'b1 : 1'b0;
+                           (fsm_ext_r == fsm_error2_st)) ? 1'b1 : 1'b0;
 
     // Address Decoding
     mst_ext_addr_err_s = 1'b0;
@@ -311,7 +311,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         fsm_idle_st: begin
           if (mst_ext_new_xfer_s == 1'b1) begin
             if (mst_ext_addr_err_s == 1'b1) begin
-              fsm_ext_r <= fsm_error_state1_st;
+              fsm_ext_r <= fsm_error1_st;
             end else if (mst_ext_gnt_s == 1'b1) begin
               mst_ext_ram_req_r <= 1'b0;
               mst_ext_misc_req_r <= 1'b0;
@@ -321,25 +321,25 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               fsm_ext_r <= fsm_transfer_wait_st;
             end
-            mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+            mst_ext_ram_gnt_r <= slv_ram_ext_gnt_s;
+            mst_ext_misc_gnt_r <= slv_misc_ext_gnt_s;
           end
         end
 
-        fsm_error_state0_st: begin
+        fsm_error0_st: begin
           if (mst_ext_hready_s == 1'b1) begin
-            fsm_ext_r <= fsm_error_state1_st;
+            fsm_ext_r <= fsm_error1_st;
           end
         end
 
-        fsm_error_state1_st: begin
-          fsm_ext_r <= fsm_error_state2_st;
+        fsm_error1_st: begin
+          fsm_ext_r <= fsm_error2_st;
         end
 
-        fsm_error_state2_st: begin
+        fsm_error2_st: begin
           if (mst_ext_new_xfer_s == 1'b1) begin
             if (mst_ext_addr_err_s == 1'b1) begin
-              fsm_ext_r <= fsm_error_state1_st;
+              fsm_ext_r <= fsm_error1_st;
             end else if (mst_ext_gnt_s == 1'b1) begin
               mst_ext_ram_req_r <= 1'b0;
               mst_ext_misc_req_r <= 1'b0;
@@ -349,8 +349,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               mst_ext_misc_req_r <= mst_ext_misc_sel_s;
               fsm_ext_r <= fsm_transfer_wait_st;
             end
-            mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+            mst_ext_ram_gnt_r <= slv_ram_ext_gnt_s;
+            mst_ext_misc_gnt_r <= slv_misc_ext_gnt_s;
           end else begin
             fsm_ext_r <= fsm_idle_st;
           end
@@ -372,9 +372,9 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             end else begin // ((ahb_mst_ext_htrans_i == ahb_trans_nonseq_e)
               if (mst_ext_addr_err_s == 1'b1) begin
                 if (mst_ext_hready_s == 1'b0) begin
-                  fsm_ext_r <= fsm_error_state0_st;
+                  fsm_ext_r <= fsm_error0_st;
                 end else begin
-                  fsm_ext_r <= fsm_error_state1_st;
+                  fsm_ext_r <= fsm_error1_st;
                 end
               end else if (mst_ext_gnt_s == 1'b1) begin
                 mst_ext_ram_req_r <= 1'b0;
@@ -385,8 +385,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
                 mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 fsm_ext_r <= fsm_transfer_wait_st;
               end
-              mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
-              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+              mst_ext_ram_gnt_r <= slv_ram_ext_gnt_s;
+              mst_ext_misc_gnt_r <= slv_misc_ext_gnt_s;
             end
           end
         end
@@ -395,8 +395,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
           if (mst_ext_gnt_s == 1'b1) begin
             mst_ext_ram_req_r <= 1'b0;
             mst_ext_misc_req_r <= 1'b0;
-            mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
-            mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+            mst_ext_ram_gnt_r <= slv_ram_ext_gnt_s;
+            mst_ext_misc_gnt_r <= slv_misc_ext_gnt_s;
             fsm_ext_r <= fsm_transfer_st;
           end
         end
@@ -405,7 +405,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
           if (mst_ext_hready_s == 1'b1) begin
             if (mst_ext_new_xfer_s == 1'b1) begin
               if (mst_ext_addr_err_s == 1'b1) begin
-                fsm_ext_r <= fsm_error_state1_st;
+                fsm_ext_r <= fsm_error1_st;
               end else if (mst_ext_gnt_s == 1'b1) begin
                 mst_ext_ram_req_r <= 1'b0;
                 mst_ext_misc_req_r <= 1'b0;
@@ -415,8 +415,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
                 mst_ext_misc_req_r <= mst_ext_misc_sel_s;
                 fsm_ext_r <= fsm_transfer_wait_st;
               end
-              mst_ext_ram_gnt_r <= ram_2_ext_gnt_s;
-              mst_ext_misc_gnt_r <= misc_2_ext_gnt_s;
+              mst_ext_ram_gnt_r <= slv_ram_ext_gnt_s;
+              mst_ext_misc_gnt_r <= slv_misc_ext_gnt_s;
             end else begin
               mst_ext_ram_gnt_r <= 1'b0;
               mst_ext_misc_gnt_r <= 1'b0;
@@ -474,19 +474,19 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_mst_ext_hresp_o  = ahb_resp_okay_e;
       end
 
-      fsm_error_state1_st: begin
+      fsm_error1_st: begin
         ahb_mst_ext_hrdata_o = 32'h00000000;
         ahb_mst_ext_hready_o = 1'b0;
         ahb_mst_ext_hresp_o  = ahb_resp_error_e;
       end
 
-      fsm_error_state2_st: begin
+      fsm_error2_st: begin
         ahb_mst_ext_hrdata_o = 32'h00000000;
         ahb_mst_ext_hready_o = 1'b1;
         ahb_mst_ext_hresp_o  = ahb_resp_error_e;
       end
 
-      fsm_error_state0_st, fsm_transfer_st: begin
+      fsm_error0_st, fsm_transfer_st: begin
         case ({mst_ext_ram_gnt_r, mst_ext_misc_gnt_r})
           2'b01: begin
             ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
@@ -546,7 +546,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     mst_dsp_rqstate_s   = ((fsm_dsp_r == fsm_idle_st) ||
                            (fsm_dsp_r == fsm_transfer_st) ||
                            (fsm_dsp_r == fsm_transfer_finish_st) ||
-                           (fsm_dsp_r == fsm_error_state2_st)) ? 1'b1 : 1'b0;
+                           (fsm_dsp_r == fsm_error2_st)) ? 1'b1 : 1'b0;
 
     // Address Decoding
     mst_dsp_addr_err_s = 1'b0;
@@ -587,7 +587,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         fsm_idle_st: begin
           if (mst_dsp_new_xfer_s == 1'b1) begin
             if (mst_dsp_addr_err_s == 1'b1) begin
-              fsm_dsp_r <= fsm_error_state1_st;
+              fsm_dsp_r <= fsm_error1_st;
             end else if (mst_dsp_gnt_s == 1'b1) begin
               mst_dsp_ram_req_r <= 1'b0;
               mst_dsp_periph_req_r <= 1'b0;
@@ -597,25 +597,25 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               mst_dsp_periph_req_r <= mst_dsp_periph_sel_s;
               fsm_dsp_r <= fsm_transfer_wait_st;
             end
-            mst_dsp_ram_gnt_r <= ram_2_dsp_gnt_s;
-            mst_dsp_periph_gnt_r <= periph_2_dsp_gnt_s;
+            mst_dsp_ram_gnt_r <= slv_ram_dsp_gnt_s;
+            mst_dsp_periph_gnt_r <= slv_periph_dsp_gnt_s;
           end
         end
 
-        fsm_error_state0_st: begin
+        fsm_error0_st: begin
           if (mst_dsp_hready_s == 1'b1) begin
-            fsm_dsp_r <= fsm_error_state1_st;
+            fsm_dsp_r <= fsm_error1_st;
           end
         end
 
-        fsm_error_state1_st: begin
-          fsm_dsp_r <= fsm_error_state2_st;
+        fsm_error1_st: begin
+          fsm_dsp_r <= fsm_error2_st;
         end
 
-        fsm_error_state2_st: begin
+        fsm_error2_st: begin
           if (mst_dsp_new_xfer_s == 1'b1) begin
             if (mst_dsp_addr_err_s == 1'b1) begin
-              fsm_dsp_r <= fsm_error_state1_st;
+              fsm_dsp_r <= fsm_error1_st;
             end else if (mst_dsp_gnt_s == 1'b1) begin
               mst_dsp_ram_req_r <= 1'b0;
               mst_dsp_periph_req_r <= 1'b0;
@@ -625,8 +625,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
               mst_dsp_periph_req_r <= mst_dsp_periph_sel_s;
               fsm_dsp_r <= fsm_transfer_wait_st;
             end
-            mst_dsp_ram_gnt_r <= ram_2_dsp_gnt_s;
-            mst_dsp_periph_gnt_r <= periph_2_dsp_gnt_s;
+            mst_dsp_ram_gnt_r <= slv_ram_dsp_gnt_s;
+            mst_dsp_periph_gnt_r <= slv_periph_dsp_gnt_s;
           end else begin
             fsm_dsp_r <= fsm_idle_st;
           end
@@ -648,9 +648,9 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             end else begin // ((ahb_mst_dsp_htrans_i == ahb_trans_nonseq_e)
               if (mst_dsp_addr_err_s == 1'b1) begin
                 if (mst_dsp_hready_s == 1'b0) begin
-                  fsm_dsp_r <= fsm_error_state0_st;
+                  fsm_dsp_r <= fsm_error0_st;
                 end else begin
-                  fsm_dsp_r <= fsm_error_state1_st;
+                  fsm_dsp_r <= fsm_error1_st;
                 end
               end else if (mst_dsp_gnt_s == 1'b1) begin
                 mst_dsp_ram_req_r <= 1'b0;
@@ -661,8 +661,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
                 mst_dsp_periph_req_r <= mst_dsp_periph_sel_s;
                 fsm_dsp_r <= fsm_transfer_wait_st;
               end
-              mst_dsp_ram_gnt_r <= ram_2_dsp_gnt_s;
-              mst_dsp_periph_gnt_r <= periph_2_dsp_gnt_s;
+              mst_dsp_ram_gnt_r <= slv_ram_dsp_gnt_s;
+              mst_dsp_periph_gnt_r <= slv_periph_dsp_gnt_s;
             end
           end
         end
@@ -671,8 +671,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
           if (mst_dsp_gnt_s == 1'b1) begin
             mst_dsp_ram_req_r <= 1'b0;
             mst_dsp_periph_req_r <= 1'b0;
-            mst_dsp_ram_gnt_r <= ram_2_dsp_gnt_s;
-            mst_dsp_periph_gnt_r <= periph_2_dsp_gnt_s;
+            mst_dsp_ram_gnt_r <= slv_ram_dsp_gnt_s;
+            mst_dsp_periph_gnt_r <= slv_periph_dsp_gnt_s;
             fsm_dsp_r <= fsm_transfer_st;
           end
         end
@@ -681,7 +681,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
           if (mst_dsp_hready_s == 1'b1) begin
             if (mst_dsp_new_xfer_s == 1'b1) begin
               if (mst_dsp_addr_err_s == 1'b1) begin
-                fsm_dsp_r <= fsm_error_state1_st;
+                fsm_dsp_r <= fsm_error1_st;
               end else if (mst_dsp_gnt_s == 1'b1) begin
                 mst_dsp_ram_req_r <= 1'b0;
                 mst_dsp_periph_req_r <= 1'b0;
@@ -691,8 +691,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
                 mst_dsp_periph_req_r <= mst_dsp_periph_sel_s;
                 fsm_dsp_r <= fsm_transfer_wait_st;
               end
-              mst_dsp_ram_gnt_r <= ram_2_dsp_gnt_s;
-              mst_dsp_periph_gnt_r <= periph_2_dsp_gnt_s;
+              mst_dsp_ram_gnt_r <= slv_ram_dsp_gnt_s;
+              mst_dsp_periph_gnt_r <= slv_periph_dsp_gnt_s;
             end else begin
               mst_dsp_ram_gnt_r <= 1'b0;
               mst_dsp_periph_gnt_r <= 1'b0;
@@ -750,19 +750,19 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_mst_dsp_hresp_o  = ahb_resp_okay_e;
       end
 
-      fsm_error_state1_st: begin
+      fsm_error1_st: begin
         ahb_mst_dsp_hrdata_o = 32'h00000000;
         ahb_mst_dsp_hready_o = 1'b0;
         ahb_mst_dsp_hresp_o  = ahb_resp_error_e;
       end
 
-      fsm_error_state2_st: begin
+      fsm_error2_st: begin
         ahb_mst_dsp_hrdata_o = 32'h00000000;
         ahb_mst_dsp_hready_o = 1'b1;
         ahb_mst_dsp_hresp_o  = ahb_resp_error_e;
       end
 
-      fsm_error_state0_st, fsm_transfer_st: begin
+      fsm_error0_st, fsm_transfer_st: begin
         case ({mst_dsp_ram_gnt_r, mst_dsp_periph_gnt_r})
           2'b01: begin
             ahb_mst_dsp_hrdata_o = ahb_slv_periph_hrdata_i;
@@ -853,8 +853,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       slv_ram_dsp_gnt_r <= 1'b0;
     end else begin
       if ({slv_ram_ext_gnt_s, slv_ram_dsp_gnt_s} != 2'd0) begin
-        slv_ram_ext_gnt_r <= ram_2_ext_gnt_s;
-        slv_ram_dsp_gnt_r <= ram_2_dsp_gnt_s;
+        slv_ram_ext_gnt_r <= slv_ram_ext_gnt_s;
+        slv_ram_dsp_gnt_r <= slv_ram_dsp_gnt_s;
       end
     end
   end
@@ -895,7 +895,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_slv_ram_hwrite_o = ahb_write_read_e;
         ahb_slv_ram_hburst_o = ahb_burst_single_e;
         ahb_slv_ram_hsize_o  = ahb_size_word_e;
-        ahb_slv_ram_htrans_o = htrans_idle_c;
+        ahb_slv_ram_htrans_o = ahb_trans_idle_e;
         ahb_slv_ram_hprot_o  = 4'h0;
         ahb_slv_ram_hready_o = ahb_slv_ram_hreadyout_i;
       end
@@ -918,7 +918,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
 
   // Slave 'periph': no arbitration necessary
   always_comb begin: proc_periph_asgn
-    periph_2_dsp_gnt_s = dsp_2_periph_req_s;
+    slv_periph_dsp_gnt_s = mst_dsp_periph_req_s;
 
     ahb_slv_periph_hsel_o     = mst_dsp_periph_req_s;  // address phase signals
     if (mst_dsp_periph_sel_s == 1'b1) begin
@@ -934,7 +934,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       ahb_slv_periph_hwrite_o = ahb_write_read_e;
       ahb_slv_periph_hburst_o = ahb_burst_single_e;
       ahb_slv_periph_hsize_o  = ahb_size_word_e;
-      ahb_slv_periph_htrans_o = htrans_idle_c;
+      ahb_slv_periph_htrans_o = ahb_trans_idle_e;
       ahb_slv_periph_hprot_o  = 4'h0;
       ahb_slv_periph_hready_o = ahb_slv_periph_hreadyout_i;
     end
@@ -948,7 +948,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
 
   // Slave 'misc': no arbitration necessary
   always_comb begin: proc_misc_asgn
-    misc_2_ext_gnt_s = ext_2_misc_req_s;
+    slv_misc_ext_gnt_s = mst_ext_misc_req_s;
 
     ahb_slv_misc_hsel_o     = mst_ext_misc_req_s;  // address phase signals
     if (mst_ext_misc_sel_s == 1'b1) begin
@@ -964,7 +964,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       ahb_slv_misc_hwrite_o = ahb_write_read_e;
       ahb_slv_misc_hburst_o = ahb_burst_single_e;
       ahb_slv_misc_hsize_o  = ahb_size_word_e;
-      ahb_slv_misc_htrans_o = htrans_idle_c;
+      ahb_slv_misc_htrans_o = ahb_trans_idle_e;
       ahb_slv_misc_hprot_o  = 4'h0;
       ahb_slv_misc_hready_o = ahb_slv_misc_hreadyout_i;
     end
