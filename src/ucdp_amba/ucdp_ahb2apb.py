@@ -175,7 +175,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         self.add_type_consts(t.AhbTransType())
         self.add_type_consts(t.ApbReadyType())
         self.add_type_consts(t.ApbRespType())
-        self.add_type_consts(Ahb2ApbFsmType(writeopt=self.writeopt), item_suffix="st")
+        self.add_type_consts(Ahb2ApbFsmType(writeopt=self.writeopt), name="fsm", item_suffix="st")
         self.add_signal(u.BitType(), "ahb_slv_sel_s")
         self.add_signal(u.BitType(), "valid_addr_s")
         self.add_signal(Ahb2ApbFsmType(), "fsm_r")
