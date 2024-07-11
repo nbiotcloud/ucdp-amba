@@ -87,7 +87,7 @@ ${parent.logic(indent=indent, skip=skip)}
   xfers.add_row(f"mst_{master.name}_rqstate_s", "=", f"((fsm_{master.name}_r == fsm_idle_st) ||")
   xfers.add_row("", "", f" (fsm_{master.name}_r == fsm_transfer_st) ||")
   xfers.add_row("", "", f" (fsm_{master.name}_r == fsm_transfer_finish_st) ||")
-  xfers.add_row("", "", f" (fsm_{master.name}_r == fsm_error_state2_st)) ? 1'b1 : 1'b0;")
+  xfers.add_row("", "", f" (fsm_{master.name}_r == fsm_error2_st)) ? 1'b1 : 1'b0;")
   reqkeep = Align(rtrim=True)
   reqkeep.set_separators(first=" "*4)
   for slavename in master_slaves:
@@ -140,7 +140,7 @@ ${reqkeep.get()}
         fsm_idle_st: begin
           if (mst_${master.name}_new_xfer_s == 1'b1) begin
             if (mst_${master.name}_addr_err_s == 1'b1) begin
-              fsm_${master.name}_r <= ${ff_dly}fsm_error_state1_st;
+              fsm_${master.name}_r <= ${ff_dly}fsm_error1_st;
             end else if (mst_${master.name}_gnt_s == 1'b1) begin
 %   for slavename in master_slaves:
               mst_${master.name}_${slavename}_req_r <= ${ff_dly}1'b0;
@@ -153,25 +153,25 @@ ${reqkeep.get()}
               fsm_${master.name}_r <= ${ff_dly}fsm_transfer_wait_st;
             end
 %   for slavename in master_slaves:
-            mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}${slavename}_2_${master.name}_gnt_s;
+            mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}slv_${slavename}_${master.name}_gnt_s;
 %   endfor
           end
         end
 
-        fsm_error_state0_st: begin
+        fsm_error0_st: begin
           if (mst_${master.name}_hready_s == 1'b1) begin
-            fsm_${master.name}_r <= ${ff_dly}fsm_error_state1_st;
+            fsm_${master.name}_r <= ${ff_dly}fsm_error1_st;
           end
         end
 
-        fsm_error_state1_st: begin
-          fsm_${master.name}_r <= ${ff_dly}fsm_error_state2_st;
+        fsm_error1_st: begin
+          fsm_${master.name}_r <= ${ff_dly}fsm_error2_st;
         end
 
-        fsm_error_state2_st: begin
+        fsm_error2_st: begin
           if (mst_${master.name}_new_xfer_s == 1'b1) begin
             if (mst_${master.name}_addr_err_s == 1'b1) begin
-              fsm_${master.name}_r <= ${ff_dly}fsm_error_state1_st;
+              fsm_${master.name}_r <= ${ff_dly}fsm_error1_st;
             end else if (mst_${master.name}_gnt_s == 1'b1) begin
 %   for slavename in master_slaves:
               mst_${master.name}_${slavename}_req_r <= ${ff_dly}1'b0;
@@ -184,7 +184,7 @@ ${reqkeep.get()}
               fsm_${master.name}_r <= ${ff_dly}fsm_transfer_wait_st;
             end
 %   for slavename in master_slaves:
-            mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}${slavename}_2_${master.name}_gnt_s;
+            mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}slv_${slavename}_${master.name}_gnt_s;
 %   endfor
           end else begin
             fsm_${master.name}_r <= ${ff_dly}fsm_idle_st;
@@ -208,9 +208,9 @@ ${reqkeep.get()}
             end else begin // ((ahb_mst_${master.name}_htrans_i == ahb_trans_nonseq_e)
               if (mst_${master.name}_addr_err_s == 1'b1) begin
                 if (mst_${master.name}_hready_s == 1'b0) begin
-                  fsm_${master.name}_r <= ${ff_dly}fsm_error_state0_st;
+                  fsm_${master.name}_r <= ${ff_dly}fsm_error0_st;
                 end else begin
-                  fsm_${master.name}_r <= ${ff_dly}fsm_error_state1_st;
+                  fsm_${master.name}_r <= ${ff_dly}fsm_error1_st;
                 end
               end else if (mst_${master.name}_gnt_s == 1'b1) begin
 %   for slavename in master_slaves:
@@ -224,7 +224,7 @@ ${reqkeep.get()}
                 fsm_${master.name}_r <= ${ff_dly}fsm_transfer_wait_st;
               end
 %   for slavename in master_slaves:
-              mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}${slavename}_2_${master.name}_gnt_s;
+              mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}slv_${slavename}_${master.name}_gnt_s;
 %   endfor
             end
           end
@@ -236,7 +236,7 @@ ${reqkeep.get()}
             mst_${master.name}_${slavename}_req_r <= ${ff_dly}1'b0;
 %   endfor
 %   for slavename in master_slaves:
-            mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}${slavename}_2_${master.name}_gnt_s;
+            mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}slv_${slavename}_${master.name}_gnt_s;
 %   endfor
             fsm_${master.name}_r <= ${ff_dly}fsm_transfer_st;
           end
@@ -246,7 +246,7 @@ ${reqkeep.get()}
           if (mst_${master.name}_hready_s == 1'b1) begin
             if (mst_${master.name}_new_xfer_s == 1'b1) begin
               if (mst_${master.name}_addr_err_s == 1'b1) begin
-                fsm_${master.name}_r <= ${ff_dly}fsm_error_state1_st;
+                fsm_${master.name}_r <= ${ff_dly}fsm_error1_st;
               end else if (mst_${master.name}_gnt_s == 1'b1) begin
 %   for slavename in master_slaves:
                 mst_${master.name}_${slavename}_req_r <= ${ff_dly}1'b0;
@@ -259,7 +259,7 @@ ${reqkeep.get()}
                 fsm_${master.name}_r <= ${ff_dly}fsm_transfer_wait_st;
               end
 %   for slavename in master_slaves:
-              mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}${slavename}_2_${master.name}_gnt_s;
+              mst_${master.name}_${slavename}_gnt_r <= ${ff_dly}slv_${slavename}_${master.name}_gnt_s;
 %   endfor
             end else begin
 %   for slavename in master_slaves:
@@ -344,19 +344,19 @@ ${reqkeep.get()}
         ahb_mst_${master.name}_hresp_o  = ahb_resp_okay_e;
       end
 
-      fsm_error_state1_st: begin
+      fsm_error1_st: begin
         ahb_mst_${master.name}_hrdata_o = ${rslvr._get_uint_value(0, mod.datawidth)};
         ahb_mst_${master.name}_hready_o = 1'b0;
         ahb_mst_${master.name}_hresp_o  = ahb_resp_error_e;
       end
 
-      fsm_error_state2_st: begin
+      fsm_error2_st: begin
         ahb_mst_${master.name}_hrdata_o = ${rslvr._get_uint_value(0, mod.datawidth)};
         ahb_mst_${master.name}_hready_o = 1'b1;
         ahb_mst_${master.name}_hresp_o  = ahb_resp_error_e;
       end
 
-      fsm_error_state0_st, fsm_transfer_st: begin
+      fsm_error0_st, fsm_transfer_st: begin
 %   if num_slaves == 1:
         ahb_mst_${master.name}_hrdata_o = ahb_slv_${sole_slv}_hrdata_i;
         ahb_mst_${master.name}_hready_o = ahb_slv_${sole_slv}_hreadyout_i;
@@ -431,7 +431,7 @@ ${reqkeep.get()}
 %   if num_masters == 1:
   // Slave '${slave.name}': no arbitration necessary
   always_comb begin: proc_${slave.name}_asgn
-    ${slave.name}_2_${sole_mst}_gnt_s = ${sole_mst}_2_${slave.name}_req_s;
+    slv_${slave.name}_${sole_mst}_gnt_s = mst_${sole_mst}_${slave.name}_req_s;
 
     ahb_slv_${slave.name}_hsel_o     = ${slv_req};  // address phase signals
     if (mst_${sole_mst}_${slave.name}_sel_s == 1'b1) begin
@@ -452,7 +452,7 @@ ${reqkeep.get()}
       ahb_slv_${slave.name}_hwrite_o = ahb_write_read_e;
       ahb_slv_${slave.name}_hburst_o = ahb_burst_single_e;
       ahb_slv_${slave.name}_hsize_o  = ahb_size_word_e;
-      ahb_slv_${slave.name}_htrans_o = htrans_idle_c;
+      ahb_slv_${slave.name}_htrans_o = ahb_trans_idle_e;
 %     if slave.proto.hprottype:
       ahb_slv_${slave.name}_hprot_o  = ${rslvr.get_default(slave.proto.hprottype)};
 %     endif
@@ -523,7 +523,7 @@ ${reqkeep.get()}
     end else begin
       if ({${slv_gnt}} != ${num_masters}'d0) begin
 %     for master in slave_masters:
-        slv_${slave.name}_${master}_gnt_r <= ${ff_dly}${slave.name}_2_${master}_gnt_s;
+        slv_${slave.name}_${master}_gnt_r <= ${ff_dly}slv_${slave.name}_${master}_gnt_s;
 %     endfor
       end
     end
@@ -557,7 +557,7 @@ ${slv_sel.get()}
         ahb_slv_${slave.name}_hwrite_o = ahb_write_read_e;
         ahb_slv_${slave.name}_hburst_o = ahb_burst_single_e;
         ahb_slv_${slave.name}_hsize_o  = ahb_size_word_e;
-        ahb_slv_${slave.name}_htrans_o = htrans_idle_c;
+        ahb_slv_${slave.name}_htrans_o = ahb_trans_idle_e;
 %     if slave.proto.hprottype:
         ahb_slv_${slave.name}_hprot_o  = ${rslvr.get_default(slave.proto.hprottype)};
 %     endif
