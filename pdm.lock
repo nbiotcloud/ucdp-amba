@@ -5,7 +5,7 @@
 groups = ["default", "checktypes", "doc", "format", "test"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.2"
-content_hash = "sha256:5590f66ca2ca464534c5bcabe2e401796791ce609fb314251dcbba59eba60a9a"
+content_hash = "sha256:76b2d99f3fcf5392b8f68fec36bc1d436b8c711ae53705918bf681f5b2707274"
 
 [[package]]
 name = "aligntext"
@@ -203,6 +203,49 @@ files = [
 ]
 
 [[package]]
+name = "cocotb"
+version = "1.8.1"
+requires_python = ">=3.6"
+summary = "cocotb is a coroutine based cosimulation library for writing VHDL and Verilog testbenches in Python."
+groups = ["test"]
+dependencies = [
+    "find-libpython",
+]
+files = [
+    {file = "cocotb-1.8.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:06ae2b2d899095ee4fd4f9604e0fd3706102ef681659f8dc68e4faf6d990d89f"},
+    {file = "cocotb-1.8.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f8d642e1106750a519c015c651ec94a5d9008da0a29d39b2d073206bd60ce452"},
+    {file = "cocotb-1.8.1-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:de9d329e747048ae8d9c08794cc2ee48850b13c387d647227ff76ac2df184fcb"},
+    {file = "cocotb-1.8.1-cp310-cp310-win32.whl", hash = "sha256:87cb47d81d6c55f64662512dda8088e5f430740a42feaa67f7b8e10bd249c02c"},
+    {file = "cocotb-1.8.1-cp310-cp310-win_amd64.whl", hash = "sha256:8b0643be8b1dee02453233a40ad94919f5781bcb08893689c99b9c7ab08695f3"},
+    {file = "cocotb-1.8.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:708cb6fcb2ee00fe80bd45a03f2a202980d2b563dcb064c2f3c904c84e87e2b1"},
+    {file = "cocotb-1.8.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4a6d3d824c746410da8f294c34dcca820f1350c1639cafb4b6394844a07f7371"},
+    {file = "cocotb-1.8.1-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:a3a9e442211691a3602dd8cce288e9b66f2bab220bc01d1b17e5f30db4a9622c"},
+    {file = "cocotb-1.8.1-cp311-cp311-win32.whl", hash = "sha256:7d47c3aa3432575eb26f6783ef7832a6db873265fd40a89ade22599e59a784f6"},
+    {file = "cocotb-1.8.1-cp311-cp311-win_amd64.whl", hash = "sha256:9ffebe392a4f0cb757ccea51d4902db9abc537e57b9151c5ecc8b4f898ec7817"},
+    {file = "cocotb-1.8.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:9d70978a5c587fc26c66c3f0e8a5bc0545a70397cbfd15b342685fed38959fc1"},
+    {file = "cocotb-1.8.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5692e56925de8d71ce8d379bd80a2e103fe0fba1e0c4c3b539b10eafe22fb6c1"},
+    {file = "cocotb-1.8.1-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4cbfb462315b12f157381c388f3ab5a074c0293e54852f8851152bf295bf6807"},
+    {file = "cocotb-1.8.1-cp312-cp312-win32.whl", hash = "sha256:ac5fa8f47613c1487156d20fb09d4679566572922971ea922ec5acec38629fa9"},
+    {file = "cocotb-1.8.1-cp312-cp312-win_amd64.whl", hash = "sha256:b9e7a09d0f76115f02d9c957110d5970e759c2bc8d1d5a448716ed3a67a66367"},
+    {file = "cocotb-1.8.1.tar.gz", hash = "sha256:1499dbe0d4d10676bc9b234861e1df171a7f02aca6b696b5fadf01fe61e3a4f6"},
+]
+
+[[package]]
+name = "cocotb-test"
+version = "0.2.5"
+requires_python = ">=3.7"
+summary = ""
+groups = ["test"]
+dependencies = [
+    "cocotb>=1.5",
+    "find-libpython",
+    "pytest",
+]
+files = [
+    {file = "cocotb-test-0.2.5.tar.gz", hash = "sha256:0f19d9cfc1b7f64fe25394ff5a5d5f788f2d5b4f04b0a742f1330c4b6ebf1343"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
@@ -345,6 +388,16 @@ groups = ["format"]
 files = [
     {file = "filelock-3.15.4-py3-none-any.whl", hash = "sha256:6ca1fffae96225dab4c6eaf1c4f4f28cd2568d3ec2a44e15a08520504de468e7"},
     {file = "filelock-3.15.4.tar.gz", hash = "sha256:2207938cbc1844345cb01a5a95524dae30f0ce089eba5b00378295a17e3e90cb"},
+]
+
+[[package]]
+name = "find-libpython"
+version = "0.4.0"
+summary = "Finds the libpython associated with your environment, wherever it may be hiding"
+groups = ["test"]
+files = [
+    {file = "find_libpython-0.4.0-py3-none-any.whl", hash = "sha256:034a4253bd57da3408aefc59aeac1650150f6c1f42e10fdd31615cf1df0842e3"},
+    {file = "find_libpython-0.4.0.tar.gz", hash = "sha256:46f9cdcd397ddb563b2d7592ded3796a41c1df5222443bd9d981721c906c03e6"},
 ]
 
 [[package]]
