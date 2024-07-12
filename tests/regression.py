@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Simulate generated System Verilog using CocoTB and verilator."""
+"""Simulate generated System Verilog using CocoTB."""
 
 import os
 
@@ -31,26 +31,30 @@ from cocotb_test.simulator import run
 # fixed seed for reproduceability
 SEED = 161411072024
 
-os.environ["SIM"] = "verilator"
+if not os.getenv("SIM"):
+    os.environ["SIM"] = "verilator"
 if not os.getenv("COCOTB_REDUCED_LOG_FMT"):
     os.environ["COCOTB_REDUCED_LOG_FMT"] = "1"
 
-os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV", "") + "/../../"
+# if FST is set in environment enable FST tracing, this is only availble if simulator is verilator
+fst = ["--trace-fst", "--trace-structs"] if os.getenv("SIM") == "verilator" and os.getenv("FST") else []
+
+prjroot = os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV", "") + "/../../"
 
 ml_fl = [
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb_ml/ucdp_ahb_ml_example/ucdp_ahb_ml_example_ml.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb_ml/ucdp_ahb_ml_example/ucdp_ahb_ml_example_ml.sv",
 ]
 
 apb2mem_fl = [
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_apb2mem/ucdp_apb2mem_example/ucdp_apb2mem_example_a2m.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_apb2mem/ucdp_apb2mem_example/ucdp_apb2mem_example_a2m.sv",
 ]
 
 ahb2apb_fl = [
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_exsample/ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_odd.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_exsample/ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_odd.sv",
 ]
 
 tests = [
@@ -60,6 +64,7 @@ tests = [
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
+    ("ahb_ml_test", "ucdp_ahb_ml_example_ml", ml_fl),
 ]
 
 
@@ -70,9 +75,11 @@ def test_generic(test):
     # print(os.environ)
     top = test[1]
     run(
+        verilog_sources=ml_fl,
         toplevel=top,
-        module=top,
-        extra_args=[] + test[2],
+        module=test[0],
+        python_search=[f"{prjroot}/tests/"],
+        extra_args=[] + fst + ["-Wno-fatal"],
         sim_build=f"sim_build_{top}",
         workdir=f"sim_run_{top}_{test}",
         timescale="1ns/1ps",
