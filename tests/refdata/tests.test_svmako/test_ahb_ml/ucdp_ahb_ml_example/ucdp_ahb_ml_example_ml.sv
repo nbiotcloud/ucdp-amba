@@ -243,19 +243,17 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic        mst_ext_ram_req_s;
   logic        mst_ext_ram_keep_s;
   logic        slv_ram_ext_gnt_r;
-  logic        slv_ram_ext_gnt_s;
   logic        slv_ram_ext_sel_s;
+  logic        slv_ram_ext_gnt_s;
   logic        mst_dsp_ram_req_s;
   logic        mst_dsp_ram_keep_s;
   logic        slv_ram_dsp_gnt_r;
-  logic        slv_ram_dsp_gnt_s;
   logic        slv_ram_dsp_sel_s;
+  logic        slv_ram_dsp_gnt_s;
   logic        mst_dsp_periph_req_s;
   logic        slv_periph_dsp_gnt_s;
-  logic        slv_periph_dsp_sel_s;
   logic        mst_ext_misc_req_s;
   logic        slv_misc_ext_gnt_s;
-  logic        slv_misc_ext_sel_s;
 
 
 

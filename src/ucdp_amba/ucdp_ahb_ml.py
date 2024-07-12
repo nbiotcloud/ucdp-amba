@@ -203,8 +203,8 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
                 if num_mst > 1:
                     self.add_signal(u.BitType(), f"mst_{master}_{slave.name}_keep_s")
                     self.add_signal(u.BitType(), f"slv_{slave.name}_{master}_gnt_r")
+                    self.add_signal(u.BitType(), f"slv_{slave.name}_{master}_sel_s")
                 self.add_signal(u.BitType(), f"slv_{slave.name}_{master}_gnt_s")
-                self.add_signal(u.BitType(), f"slv_{slave.name}_{master}_sel_s")
 
     @staticmethod
     def build_top(**kwargs):
