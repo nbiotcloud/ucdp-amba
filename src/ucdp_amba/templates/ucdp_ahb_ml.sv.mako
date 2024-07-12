@@ -43,12 +43,12 @@ def get_slave_addrspaces(mod: UcdpAhbMlMod, slavename: str) -> Iterator[SlaveAdd
     if aspc.slave.name == slavename:
       yield aspc
 
-def decode_casex(decoding_slice: u.Slice, addrspaces: list[SlaveAddrspace]):
+def decode_casez(decoding_slice: u.Slice, addrspaces: list[SlaveAddrspace]):
   allmasks = []
   for addrspace in addrspaces:
     size = addrspace.size >> decoding_slice.right
     base = addrspace.baseaddr >> decoding_slice.right
-    masks = [f"{decoding_slice.width}'b{mask}" for mask in num.calc_addrwinmasks(base, size, decoding_slice.width, 'x')]
+    masks = [f"{decoding_slice.width}'b{mask}" for mask in num.calc_addrwinmasks(base, size, decoding_slice.width, '?')]
     allmasks.extend(masks)
   return ", ".join(allmasks)
 
@@ -94,6 +94,7 @@ ${parent.logic(indent=indent, skip=skip)}
     reqkeep.add_row(f"mst_{master.name}_{slavename}_req_s", "=", f"(mst_{master.name}_{slavename}_sel_s & mst_{master.name}_new_xfer_s & mst_{master.name}_rqstate_s) | mst_{master.name}_{slavename}_req_r;")
     if len(mod._slave_masters[slavename]) > 1:
       reqkeep.add_row(f"mst_{master.name}_{slavename}_keep_s", "=", f"mst_{master.name}_{slavename}_sel_s & mst_{master.name}_cont_xfer_s;")
+  mst_dec_slice = dec_slices[master.name]
 %>\
   // Master '${master.name}' Logic
   always_comb begin: proc_${master.name}_logic
@@ -105,9 +106,9 @@ ${xfers.get()}
     mst_${master.name}_${slavename}_sel_s = 1'b0;
 %   endfor
 
-    casex (ahb_mst_${master.name}_haddr_i)
+    casez (ahb_mst_${master.name}_haddr_i[${mst_dec_slice}])
 %   for slavename in master_slaves:
-      ${decode_casex(dec_slices[master.name], get_slave_addrspaces(mod, slavename))}: begin // ${slavename}
+      ${decode_casez(mst_dec_slice, get_slave_addrspaces(mod, slavename))}: begin // ${slavename}
         mst_${master.name}_${slavename}_sel_s = 1'b1;
       end
 
@@ -501,6 +502,7 @@ ${reqkeep.get()}
     arb_en_s = ~(${slv_keep});
 
     next_grant_s = {prev_grant_s[${num_masters-2}:0], prev_grant_s[${num_masters-1}]}; // 1st candidate is old grant rotated 1 left
+    found_s = 1'b0;
     for (i=0; i<${num_masters}; i=i+1) begin
       if (found_s == 1'b0) begin
         if ((slv_req_s & next_grant_s) != ${num_masters}'d0) begin

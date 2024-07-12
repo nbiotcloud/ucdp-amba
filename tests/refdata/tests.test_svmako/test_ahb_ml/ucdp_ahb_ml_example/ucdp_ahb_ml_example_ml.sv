@@ -277,12 +277,12 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     mst_ext_ram_sel_s = 1'b0;
     mst_ext_misc_sel_s = 1'b0;
 
-    casex (ahb_mst_ext_haddr_i)
-      22'b1111000000000000xxxxxx: begin // ram
+    casez (ahb_mst_ext_haddr_i[31:10])
+      22'b1111000000000000??????: begin // ram
         mst_ext_ram_sel_s = 1'b1;
       end
 
-      22'b100000000000000000xxxx, 22'b10000000000000000100xx, 22'b100000000000000001010x, 22'b1000000000000000010110, 22'b11110000000000100xxxxx: begin // misc
+      22'b100000000000000000????, 22'b10000000000000000100??, 22'b100000000000000001010?, 22'b1000000000000000010110, 22'b11110000000000100?????: begin // misc
         mst_ext_misc_sel_s = 1'b1;
       end
 
@@ -553,7 +553,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     mst_dsp_ram_sel_s = 1'b0;
     mst_dsp_periph_sel_s = 1'b0;
 
-    casex (ahb_mst_dsp_haddr_i)
+    casez (ahb_mst_dsp_haddr_i[31:16])
       16'b1111000000000000: begin // ram
         mst_dsp_ram_sel_s = 1'b1;
       end
@@ -833,6 +833,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     arb_en_s = ~(mst_ext_ram_keep_s | mst_dsp_ram_keep_s);
 
     next_grant_s = {prev_grant_s[0:0], prev_grant_s[1]}; // 1st candidate is old grant rotated 1 left
+    found_s = 1'b0;
     for (i=0; i<2; i=i+1) begin
       if (found_s == 1'b0) begin
         if ((slv_req_s & next_grant_s) != 2'd0) begin
