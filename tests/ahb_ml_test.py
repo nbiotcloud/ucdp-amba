@@ -46,7 +46,8 @@ async def ahb_ml_test(dut):
         hsel=None,
     )
 
-    hclk_proc = Clock(hclk, period=10).start()
+
+    hclk_proc = cocotb.start_soon(Clock(hclk, period=10).start())
     
     # initial reset
     rst_an.value = 0

@@ -60,7 +60,7 @@ class AHBMasterDriver:
         self.haddr <= addr
         self.hwdata <= 0
         self.hwrite <= 1
-        self.hsel & self.hsel <= 1
+        self.hsel and self.hsel <= 1
         self.htrans <= TransType.NONSEQ
         self.hburst <= burst_type
         self.hsize <= size
@@ -74,7 +74,7 @@ class AHBMasterDriver:
             self.htrans <= TransType.SEQ
             self.hwdata <= data
             await RisingEdge(self.clk)
-        self.hsel & self.hsel <= 0
+        self.hsel and self.hsel <= 0
 
     async def read(self, addr, burst_length=1, burst_type=BurstType.SINGLE):
         self.bus <= addr
