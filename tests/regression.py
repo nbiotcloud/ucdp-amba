@@ -24,20 +24,24 @@
 """Simulate generated System Verilog using CocoTB."""
 
 import os
+import subprocess
 
 import pytest
 from cocotb_test.simulator import run
+from pathlib import Path
 
 # fixed seed for reproduceability
 SEED = 161411072024
 
-if not os.getenv("SIM"):
-    os.environ["SIM"] = "verilator"
+sim = os.getenv("SIM")
+gui = os.getenv("GUI", "")
+waves = "1" if os.getenv("WAVES") or gui else "" 
+
+if not sim:
+    sim = os.environ["SIM"] = "verilator"
 if not os.getenv("COCOTB_REDUCED_LOG_FMT"):
     os.environ["COCOTB_REDUCED_LOG_FMT"] = "1"
 
-# if FST is set in environment enable FST tracing, this is only availble if simulator is verilator
-fst = ["--trace-fst", "--trace-structs"] if os.getenv("SIM") == "verilator" and os.getenv("FST") else []
 
 prjroot = os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV", "") + "/../../"
 
@@ -74,15 +78,29 @@ def test_generic(test):
     # print(os.getcwd())
     # print(os.environ)
     top = test[1]
+    sim_build=f"sim_build_{top}"
     run(
-        verilog_sources=ml_fl,
+        verilog_sources=test[2],
         toplevel=top,
         module=test[0],
         python_search=[f"{prjroot}/tests/"],
-        extra_args=[] + fst + ["-Wno-fatal"],
-        sim_build=f"sim_build_{top}",
+        extra_args=[] + ["-Wno-fatal"],
+        sim_build=sim_build,
         workdir=f"sim_run_{top}_{test}",
         timescale="1ns/1ps",
         seed=SEED,
-        gui=os.getenv("GUI", ""),
+        waves=waves,
+        gui=gui,
     )
+
+    # gui param above does nothing for verilator as the handling is a bit special, so we do it here
+    if sim == "verilator" and waves:
+        subprocess.check_call(["verilator", "-Wno-fatal"] + test[2] + ["-xml-only", "--bbox-sys", "-top", top, "--xml-output", f"{sim_build}/{top}.xml"])
+        subprocess.check_call(["xml2stems", f"{sim_build}/{top}.xml", f"{sim_build}/{top}.stems"])
+        
+    if sim == "verilator" and gui:
+        if (Path(prjroot) / "tests" / f"{top}.gtkw").exists():
+            restore = f"{top}.gtkw"
+        else:
+            restore = ""
+        subprocess.check_call(["gtkwave", "-t", f"{sim_build}/{top}.stems", f"{sim_build}/dump.fst", restore])
