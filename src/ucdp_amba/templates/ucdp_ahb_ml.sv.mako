@@ -61,8 +61,8 @@ def decode_casez(decoding_slice: u.Slice, addrspaces: list[SlaveAddrspace]):
   dec_slices: dict[str, u.Slice] = {}
   num_masters = len(mod.masters)
   for master in mod.masters:
-    rng_bits = [num.calc_lowest_bit_set(aspc.size) for aspc in get_master_addrspaces(mod, master.name)]
-    dec_slices[master.name] = u.Slice(left=mod.addrwidth-1, right=min(rng_bits))
+    dec_bits = [num.calc_lowest_bit_set(aspc.size) for aspc in get_master_addrspaces(mod, master.name)]
+    dec_slices[master.name] = u.Slice(left=mod.addrwidth-1, right=min(dec_bits))
 
   ff_dly = f"#{rslvr.ff_dly} " if rslvr.ff_dly else ""
 %>\
