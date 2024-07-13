@@ -169,7 +169,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
     apb_slv3_sel_s = 1'b0;
     apb_slv5_sel_s = 1'b0;
 
-    casex(ahb_slv_haddr_i[31:12])
+    casez(ahb_slv_haddr_i[31:12])
       20'b00000000000000000000: begin // default
         valid_addr_s = 1'b1;
         apb_default_sel_s = 1'b1;
@@ -325,7 +325,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
   assign ahb_slv_hresp_o = hresp_r;
   assign ahb_slv_hrdata_o = prdata_r;
 
-  assign pwdata_s = (fms_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
+  assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
 
   // Slave 'default':
   assign apb_slv_default_paddr_o   = paddr_r[11:0];

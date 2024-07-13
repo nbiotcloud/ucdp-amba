@@ -168,8 +168,8 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
     apb_bar_sel_s = 1'b0;
     apb_baz_sel_s = 1'b0;
 
-    casex(ahb_slv_haddr_i[26:10])
-      17'b000000000000000xx: begin // foo
+    casez(ahb_slv_haddr_i[26:10])
+      17'b000000000000000??: begin // foo
         valid_addr_s = 1'b1;
         apb_foo_sel_s = 1'b1;
       end
@@ -179,7 +179,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
         apb_bar_sel_s = 1'b1;
       end
 
-      17'b00000000000010xxx, 17'b000000000000110xx, 17'b00000000000011100: begin // baz
+      17'b00000000000010???, 17'b000000000000110??, 17'b00000000000011100: begin // baz
         valid_addr_s = 1'b1;
         apb_baz_sel_s = 1'b1;
       end
@@ -214,7 +214,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
       fsm_r <= fsm_idle_st;
       hready_r <= 1'b1;
       hresp_r <= apb_resp_okay_e;
-      paddr_r <= 12'h000;
+      paddr_r <= 14'h0000;
       pwrite_r <= 1'b0;
       pwdata_r <= 32'h00000000;
       penable_r <= 1'b0;
@@ -228,7 +228,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
             hready_r <= 1'b0;
             if (valid_addr_s == 1'b1) begin
-              paddr_r <= ahb_slv_haddr_i[11:0];
+              paddr_r <= ahb_slv_haddr_i[13:0];
               pwrite_r <= ahb_slv_hwrite_i;
               apb_foo_sel_r <= apb_foo_sel_s;
               apb_bar_sel_r <= apb_bar_sel_s;
@@ -278,7 +278,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
             hready_r <= 1'b0;
             if (valid_addr_s == 1'b1) begin
-              paddr_r <= ahb_slv_haddr_i[11:0];
+              paddr_r <= ahb_slv_haddr_i[13:0];
               fsm_r <= fsm_apb_ctrl_st;
             end else begin
               fsm_r <= fsm_ahb_err_st;
@@ -324,7 +324,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   assign ahb_slv_hresp_o = hresp_r;
   assign ahb_slv_hrdata_o = prdata_r;
 
-  assign pwdata_s = (fms_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
+  assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
 
   // Slave 'foo':
   assign apb_slv_foo_paddr_o   = paddr_r[11:0];

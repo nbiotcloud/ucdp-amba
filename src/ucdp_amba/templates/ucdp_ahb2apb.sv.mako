@@ -30,10 +30,10 @@ from ucdp_glbl.addrslave import SlaveAddrspace
 from icdutil import num
 
 
-def decode_casex(decoding_slice: u.Slice, addrspace: SlaveAddrspace):
+def decode_casez(decoding_slice: u.Slice, addrspace: SlaveAddrspace):
   size = addrspace.size >> decoding_slice.right
   base = addrspace.baseaddr >> decoding_slice.right
-  masks = [f"{decoding_slice.width}'b{mask}" for mask in num.calc_addrwinmasks(base, size, decoding_slice.width, 'x')]
+  masks = [f"{decoding_slice.width}'b{mask}" for mask in num.calc_addrwinmasks(base, size, decoding_slice.width, '?')]
   return ", ".join(masks)
 
 %>
@@ -43,8 +43,9 @@ def decode_casex(decoding_slice: u.Slice, addrspace: SlaveAddrspace):
 <%
   rslvr = usv.get_resolver(mod)
   nr_slv = len(mod.slaves)
-  rng_bits = [num.calc_lowest_bit_set(aspc.size) for aspc in mod.addrmap]
-  dec_slice = u.Slice(left=mod.ahb_addrwidth-1, right=min(rng_bits))
+  dec_bits = [num.calc_lowest_bit_set(aspc.size) for aspc in mod.addrmap]
+  dec_slice = u.Slice(left=mod.ahb_addrwidth-1, right=min(dec_bits))
+  rng_bits = [num.calc_unsigned_width(aspc.size - 1) for aspc in mod.addrmap]
   paddr_slice = u.Slice(width=max(rng_bits))
 
   ff_dly = f"#{rslvr.ff_dly} " if rslvr.ff_dly else ""
@@ -61,9 +62,9 @@ ${parent.logic(indent=indent, skip=skip)}\
     apb_${aspc.name}_sel_s = 1'b0;
 % endfor
 
-    casex(ahb_slv_haddr_i[${dec_slice}])
+    casez(ahb_slv_haddr_i[${dec_slice}])
 % for aspc in mod.addrmap:
-      ${decode_casex(dec_slice, aspc)}: begin // ${aspc.name}
+      ${decode_casez(dec_slice, aspc)}: begin // ${aspc.name}
         valid_addr_s = 1'b1;
         apb_${aspc.name}_sel_s = 1'b1;
       end
@@ -263,7 +264,7 @@ ${parent.logic(indent=indent, skip=skip)}\
 % endif
   assign ahb_slv_hrdata_o = prdata_r;
 
-  assign pwdata_s = (fms_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
+  assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
 
 ${outp_asgn.get()}
 % if mod.errirq:
