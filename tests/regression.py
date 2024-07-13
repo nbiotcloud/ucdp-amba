@@ -99,8 +99,9 @@ def test_generic(test):
         subprocess.check_call(["xml2stems", f"{sim_build}/{top}.xml", f"{sim_build}/{top}.stems"])
         
     if sim == "verilator" and gui:
-        if (Path(prjroot) / "tests" / f"{top}.gtkw").exists():
-            restore = f"{top}.gtkw"
+        restore_path = Path(prjroot) / "tests" / f"{test[0]}.gtkw"
+        if restore_path.exists():
+            restore = str(restore_path)
         else:
             restore = ""
-        subprocess.check_call(["gtkwave", "-t", f"{sim_build}/{top}.stems", f"{sim_build}/dump.fst", restore])
+        subprocess.check_call(["gtkwave", "-t", f"{sim_build}/{top}.stems", "-f", f"{sim_build}/dump.fst", "-a", restore, "-r", ".gtkwaverc"])

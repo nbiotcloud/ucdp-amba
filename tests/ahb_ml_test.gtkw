@@ -1,20 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
-[*] Sat Jul 13 00:01:59 2024
+[*] Sat Jul 13 18:52:59 2024
 [*]
 [dumpfile] "/home/mkrause/projects/ucdp-amba/tests/sim_build_ucdp_ahb_ml_example_ml/dump.fst"
-[dumpfile_mtime] "Fri Jul 12 23:48:59 2024"
-[dumpfile_size] 2539
+[dumpfile_mtime] "Sat Jul 13 18:49:50 2024"
+[dumpfile_size] 2568
 [savefile] "/home/mkrause/projects/ucdp-amba/tests/ahb_ml_test.gtkw"
 [timestart] 0
-[size] 1995 1057
+[size] 1995 800
 [pos] -1 -1
-*-4.878952 126 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-6.192284 205 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] ucdp_ahb_ml_example_ml.
 [sst_width] 273
 [signals_width] 321
 [sst_expanded] 1
-[sst_vpaned_height] 316
+[sst_vpaned_height] 227
 @28
 main_clk_i
 main_rst_an_i

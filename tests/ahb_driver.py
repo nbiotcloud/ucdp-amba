@@ -57,54 +57,61 @@ class AHBMasterDriver:
         self.hsel = hsel  # allowed to be None as it might not be present (e.g. Multilayer input)
 
     async def write(self, addr, data, size=SizeType.WORD, burst_length=1, burst_type=BurstType.SINGLE):
-        self.haddr <= addr
-        self.hwdata <= 0
-        self.hwrite <= 1
-        self.hsel and self.hsel <= 1
-        self.htrans <= TransType.NONSEQ
-        self.hburst <= burst_type
-        self.hsize <= size
+        self.haddr.value = addr
+        self.hwdata.value = 0
+        self.hwrite.value = 1
+        if self.hsel:
+            self.hsel.value = 1
+        self.htrans.value = TransType.NONSEQ
+        self.hburst.value = burst_type
+        self.hsize.value = size
         await RisingEdge(self.clk)
-        self.haddr <= 0
-        self.hwdata <= data
-        self.hwrite <= 0
-        self.htrans <= TransType.IDLE
+        self.haddr.value = 0
+        self.hwdata.value = data
+        self.hwrite.value = 0
+        self.htrans.value = TransType.IDLE
         # TODO wait for ready
         for _ in range(burst_length - 1):
-            self.htrans <= TransType.SEQ
-            self.hwdata <= data
+            self.htrans.value = TransType.SEQ
+            self.hwdata.value = data
             await RisingEdge(self.clk)
-        self.hsel and self.hsel <= 0
+        if self.hsel:
+            self.hsel.value = 0
 
     async def read(self, addr, burst_length=1, burst_type=BurstType.SINGLE):
-        self.bus <= addr
+        self.bus.value = addr
         await RisingEdge(self.clk)
-        self.hsel <= 1
-        self.hwrite <= 0
-        self.htrans <= TransType.NONSEQ
-        self.hburst <= burst_type
+        if self.hsel:
+            self.hsel.value = 1
+        self.hwrite.value = 0
+        self.htrans.value = TransType.NONSEQ
+        self.hburst.value = burst_type
         for _ in range(burst_length - 1):
-            self.hsel <= 1
-            self.htrans <= TransType.SEQ
+            self.hsel.value = 1
+            self.htrans.value = TransType.SEQ
             await RisingEdge(self.clk)
-        self.hsel <= 0
+        if self.hsel:
+            self.hsel.value = 0
         return self.hrdata.value
 
     async def reset(self):
-        self.hsel <= 0
-        self.hwrite <= 0
-        self.hwdata <= 0
-        self.htrans <= 0  # IDLE
-        self.hburst <= 0
+        if self.hsel:
+            self.hsel.value = 0
+        self.hwrite.value = 0
+        self.hwdata.value = 0
+        self.htrans.value = 0  # IDLE
+        self.hburst.value = 0
         await RisingEdge(self.clk)
-        self.hsel <= 1
-        self.hwrite <= 1
-        self.hwdata <= 0
-        self.htrans <= 2  # NONSEQ
-        self.hburst <= 0
+        if self.hsel:
+            self.hsel.value = 1
+        self.hwrite.value = 1
+        self.hwdata.value = 0
+        self.htrans.value = 2  # NONSEQ
+        self.hburst.value = 0
         await RisingEdge(self.clk)
-        self.hsel <= 0
-        self.htrans <= 0  # IDLE
+        if self.hsel:
+            self.hsel.value = 0
+        self.htrans.value = 0  # IDLE
 
 
 class AHBSlave:
