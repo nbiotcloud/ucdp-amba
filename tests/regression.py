@@ -21,36 +21,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Simulate generated System Verilog using CocoTB and verilator."""
+"""Simulate generated System Verilog using CocoTB."""
 
 import os
+import subprocess
 
 import pytest
 from cocotb_test.simulator import run
+from pathlib import Path
 
 # fixed seed for reproduceability
 SEED = 161411072024
 
-os.environ["SIM"] = "verilator"
+sim = os.getenv("SIM")
+gui = os.getenv("GUI", "")
+waves = "1" if os.getenv("WAVES") or gui else "" 
+
+if not sim:
+    sim = os.environ["SIM"] = "verilator"
 if not os.getenv("COCOTB_REDUCED_LOG_FMT"):
     os.environ["COCOTB_REDUCED_LOG_FMT"] = "1"
 
-os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV", "") + "/../../"
+
+prjroot = os.environ["PRJROOT"] = os.getenv("VIRTUAL_ENV", "") + "/../../"
 
 ml_fl = [
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb_ml/ucdp_ahb_ml_example/ucdp_ahb_ml_example_ml.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb_ml/ucdp_ahb_ml_example/ucdp_ahb_ml_example_ml.sv",
 ]
 
 apb2mem_fl = [
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_apb2mem/ucdp_apb2mem_example/ucdp_apb2mem_example_a2m.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_apb2mem/ucdp_apb2mem_example/ucdp_apb2mem_example_a2m.sv",
 ]
 
 ahb2apb_fl = [
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_exsample/ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue.sv",
-    "$PRJROOT/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_odd.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_exsample/ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_odd.sv",
 ]
 
 tests = [
@@ -60,6 +68,7 @@ tests = [
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
+    ("ahb_ml_test", "ucdp_ahb_ml_example_ml", ml_fl),
 ]
 
 
@@ -69,13 +78,29 @@ def test_generic(test):
     # print(os.getcwd())
     # print(os.environ)
     top = test[1]
+    sim_build=f"sim_build_{top}"
     run(
+        verilog_sources=test[2],
         toplevel=top,
-        module=top,
-        extra_args=[] + test[2],
-        sim_build=f"sim_build_{top}",
+        module=test[0],
+        python_search=[f"{prjroot}/tests/"],
+        extra_args=[] + ["-Wno-fatal"],
+        sim_build=sim_build,
         workdir=f"sim_run_{top}_{test}",
         timescale="1ns/1ps",
         seed=SEED,
-        gui=os.getenv("GUI", ""),
+        waves=waves,
+        gui=gui,
     )
+
+    # gui param above does nothing for verilator as the handling is a bit special, so we do it here
+    if sim == "verilator" and waves:
+        subprocess.check_call(["verilator", "-Wno-fatal"] + test[2] + ["-xml-only", "--bbox-sys", "-top", top, "--xml-output", f"{sim_build}/{top}.xml"])
+        subprocess.check_call(["xml2stems", f"{sim_build}/{top}.xml", f"{sim_build}/{top}.stems"])
+        
+    if sim == "verilator" and gui:
+        if (Path(prjroot) / "tests" / f"{top}.gtkw").exists():
+            restore = f"{top}.gtkw"
+        else:
+            restore = ""
+        subprocess.check_call(["gtkwave", "-t", f"{sim_build}/{top}.stems", f"{sim_build}/dump.fst", restore])

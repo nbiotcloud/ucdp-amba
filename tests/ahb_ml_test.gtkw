@@ -1,0 +1,61 @@
+[*]
+[*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
+[*] Sat Jul 13 00:01:59 2024
+[*]
+[dumpfile] "/home/mkrause/projects/ucdp-amba/tests/sim_build_ucdp_ahb_ml_example_ml/dump.fst"
+[dumpfile_mtime] "Fri Jul 12 23:48:59 2024"
+[dumpfile_size] 2539
+[savefile] "/home/mkrause/projects/ucdp-amba/tests/ahb_ml_test.gtkw"
+[timestart] 0
+[size] 1995 1057
+[pos] -1 -1
+*-4.878952 126 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] ucdp_ahb_ml_example_ml.
+[sst_width] 273
+[signals_width] 321
+[sst_expanded] 1
+[sst_vpaned_height] 316
+@28
+main_clk_i
+main_rst_an_i
+@200
+-AHBMST DSP
+@22
+ahb_mst_dsp_haddr_i[31:0]
+@28
+ahb_mst_dsp_hburst_i[2:0]
+@22
+ahb_mst_dsp_hprot_i[3:0]
+ahb_mst_dsp_hrdata_o[31:0]
+@28
+ahb_mst_dsp_hready_o
+ahb_mst_dsp_hresp_o
+ahb_mst_dsp_hsize_i[2:0]
+ahb_mst_dsp_htrans_i[1:0]
+@22
+ahb_mst_dsp_hwdata_i[31:0]
+@28
+ahb_mst_dsp_hwrite_i
+@100000028
+ucdp_ahb_ml_example_ml.fsm_dsp_r[2:0]
+@200
+-AHBMST EXT
+@22
+ahb_mst_ext_haddr_i[31:0]
+@28
+ahb_mst_ext_hburst_i[2:0]
+@22
+ahb_mst_ext_hprot_i[3:0]
+ahb_mst_ext_hrdata_o[31:0]
+@28
+ahb_mst_ext_hready_o
+ahb_mst_ext_hresp_o
+ahb_mst_ext_hsize_i[2:0]
+ahb_mst_ext_htrans_i[1:0]
+@22
+ahb_mst_ext_hwdata_i[31:0]
+@28
+ahb_mst_ext_hwrite_i
+ucdp_ahb_ml_example_ml.fsm_ext_r[2:0]
+[pattern_trace] 1
+[pattern_trace] 0
