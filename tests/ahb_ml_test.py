@@ -56,3 +56,7 @@ async def ahb_ml_test(dut):
     await wait_clocks(hclk, 10)
 
     await ext_mst.write(0xF0000000, 0xAFFEAFFE)
+
+    await wait_clocks(hclk, 10)
+    await wait_clocks(hclk, 10)
+    await wait_clocks(hclk, 10)
