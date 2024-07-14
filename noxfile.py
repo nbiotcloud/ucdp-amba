@@ -112,7 +112,7 @@ def test_rtl(session: nox.Session) -> None:
     _init(session)
     session.run_always("pdm", "install", "-G", ":all")
     with session.chdir("tests"):
-        session.run("pytest", "-vv", "regression.py", *session.posargs)
+        session.run("pytest", "-vvsrA", "regression.py", *session.posargs)
 
 
 def _init(session: nox.Session):
