@@ -25,17 +25,17 @@
 
 import os
 import subprocess
+from pathlib import Path
 
 import pytest
 from cocotb_test.simulator import run
-from pathlib import Path
 
 # fixed seed for reproduceability
 SEED = 161411072024
 
 sim = os.getenv("SIM")
 gui = os.getenv("GUI", "")
-waves = "1" if os.getenv("WAVES") or gui else "" 
+waves = "1" if os.getenv("WAVES") or gui else ""
 
 if not sim:
     sim = os.environ["SIM"] = "verilator"
@@ -78,7 +78,7 @@ def test_generic(test):
     # print(os.getcwd())
     # print(os.environ)
     top = test[1]
-    sim_build=f"sim_build_{top}"
+    sim_build = f"sim_build_{top}"
     run(
         verilog_sources=test[2],
         toplevel=top,
@@ -95,13 +95,29 @@ def test_generic(test):
 
     # gui param above does nothing for verilator as the handling is a bit special, so we do it here
     if sim == "verilator" and waves:
-        subprocess.check_call(["verilator", "-Wno-fatal"] + test[2] + ["-xml-only", "--bbox-sys", "-top", top, "--xml-output", f"{sim_build}/{top}.xml"])
+        subprocess.check_call(
+            ["verilator", "-Wno-fatal"]
+            + test[2]
+            + ["-xml-only", "--bbox-sys", "-top", top, "--xml-output", f"{sim_build}/{top}.xml"]
+        )
         subprocess.check_call(["xml2stems", f"{sim_build}/{top}.xml", f"{sim_build}/{top}.stems"])
-        
+
     if sim == "verilator" and gui:
         restore_path = Path(prjroot) / "tests" / f"{test[0]}.gtkw"
         if restore_path.exists():
             restore = str(restore_path)
         else:
             restore = ""
-        subprocess.check_call(["gtkwave", "-t", f"{sim_build}/{top}.stems", "-f", f"{sim_build}/dump.fst", "-a", restore, "-r", ".gtkwaverc"])
+        subprocess.check_call(
+            [
+                "gtkwave",
+                "-t",
+                f"{sim_build}/{top}.stems",
+                "-f",
+                f"{sim_build}/dump.fst",
+                "-a",
+                restore,
+                "-r",
+                ".gtkwaverc",
+            ]
+        )

@@ -1,6 +1,7 @@
 from enum import IntEnum
-import cocotb
+
 from cocotb.triggers import RisingEdge
+
 
 class BurstType(IntEnum):
     """HBURST encoding as per AHB spec."""
@@ -30,18 +31,19 @@ class SizeType(IntEnum):
     BYTE = 0  # 8-bit
     HALFWORD = 1  # 16-bit
     WORD = 2  # 32-bit
-    DOUBLEWORD = 3 # 64-bit
+    DOUBLEWORD = 3  # 64-bit
     WORD4 = 4  # 128-bit
     WORD8 = 5  # 256-bit
     WORD16 = 6  # 512-bit
     WORD32 = 7  # 1024-bit
-    
 
 
 class AHBMasterDriver:
     """AHB Master bus driver."""
 
-    def __init__(self, clk, rst_an, haddr, hwrite, hwdata, htrans, hburst, hsize, hprot, hrdata, hready, hresp, hsel=None):
+    def __init__(
+        self, clk, rst_an, haddr, hwrite, hwdata, htrans, hburst, hsize, hprot, hrdata, hready, hresp, hsel=None
+    ):
         self.clk = clk
         self.rst_an = rst_an
         self.haddr = haddr
@@ -150,21 +152,19 @@ class AHBSlave:
                         data = await self.dut.hwdata.read()
                         await self.write(self.dut.haddr.value, data)
                         self.dut.haddr.value += 4  # Increment address for burst
-                else:
-                    # Handle read request
-                    if self.dut.hburst.value == 0:  # Single transfer
-                        size = 2 if self.dut.hburst.value == 2 else 1
-                        data = await self.read(self.dut.haddr.value, size)
-                        await self.dut.hrdata.write(data)
-                    else:  # Burst transfer
-                        size = 2 if self.dut.hburst.value == 2 else 1
-                        data = await self.read(self.dut.haddr.value, size)
-                        await self.dut.hrdata.write(data)
-                        self.dut.haddr.value += 4  # Increment address for burst
-                        self.burst_count -= 1
-                        if self.burst_count == 0:
-                            self.dut.hready.value = 1
-                            self.dut.hresp.value = 0  # No error
+                elif self.dut.hburst.value == 0:  # Single transfer
+                    size = 2 if self.dut.hburst.value == 2 else 1
+                    data = await self.read(self.dut.haddr.value, size)
+                    await self.dut.hrdata.write(data)
+                else:  # Burst transfer
+                    size = 2 if self.dut.hburst.value == 2 else 1
+                    data = await self.read(self.dut.haddr.value, size)
+                    await self.dut.hrdata.write(data)
+                    self.dut.haddr.value += 4  # Increment address for burst
+                    self.burst_count -= 1
+                    if self.burst_count == 0:
+                        self.dut.hready.value = 1
+                        self.dut.hresp.value = 0  # No error
                 for _ in range(self.hready_delay):
                     await RisingEdge(self.clk)
             else:
