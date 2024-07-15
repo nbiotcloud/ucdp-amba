@@ -38,6 +38,13 @@ class SizeType(IntEnum):
     WORD32 = 7  # 1024-bit
 
 
+class SlaveFsmState(IntEnum):
+    """Internal AHB Slave State."""
+
+    IDLE = 0
+    ACTIVE = 1
+
+
 class AHBMasterDriver:
     """AHB Master bus driver."""
 
@@ -119,11 +126,25 @@ class AHBMasterDriver:
 class AHBSlave:
     """Active AHB Slave that can respond to Master requests."""
 
-    def __init__(self, dut, hready_delay=0):
-        self.dut = dut
-        self.mem = bytearray(1024)  # Initialize a 1KB memory
+    def __init__(self, clk, rst_an, haddr, hwrite, hwdata, htrans, hburst, hsize, hrdata, hready, hresp, hsel, hprot=None, hready_delay=0, size_bytes=1024):
+        self.clk = clk
+        self.rst_an = rst_an
+        self.haddr = haddr
+        self.hwrite = hwrite
+        self.hwdata = hwdata
+        self.htrans = htrans
+        self.hburst = hburst
+        self.hsize = hsize
+        self.hrdata = hrdata
+        self.hready = hready
+        self.hresp = hresp
+        self.hsel = hsel
+        self.hprot = hprot  # allowed to be None as it might not be present (e.g. Multilayer input)
+
+        self.mem = bytearray(size_bytes)  # Initialize a 1KB memory
         self.hready_delay = hready_delay  # Delay for HREADY signal
         self.burst_count = 0  # Burst count for burst transactions
+        self.state = 0
 
     async def read(self, addr, size):
         # Read data from memory
@@ -139,36 +160,39 @@ class AHBSlave:
 
     async def run(self):
         while True:
+            self.hready.value = 1
+            self.hrdata = 0
             await RisingEdge(self.clk)
             # Check if there's an AHB request
-            if self.dut.hsel.value and self.dut.hready.value:
-                if self.dut.hwrite.value:
+            if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
+                for _ in range(self.hready_delay):  # delay the answer if configured
+                    await RisingEdge(self.clk)
+                if self.hwrite.value:
                     # Handle write request
-                    if self.dut.hburst.value == 0:  # Single transfer
-                        data = await self.dut.hwdata.read()
-                        await self.write(self.dut.haddr.value, data)
+                    if self.hburst.value == BurstType.SINGLE:  # Single transfer
+                        data = await self.hwdata.read()
+                        await self.write(self.haddr.value, data)
                     else:  # Burst transfer
-                        self.burst_count = 2 if self.dut.hburst.value == 2 else 1
-                        data = await self.dut.hwdata.read()
-                        await self.write(self.dut.haddr.value, data)
-                        self.dut.haddr.value += 4  # Increment address for burst
-                elif self.dut.hburst.value == 0:  # Single transfer
-                    size = 2 if self.dut.hburst.value == 2 else 1
-                    data = await self.read(self.dut.haddr.value, size)
-                    await self.dut.hrdata.write(data)
+                        self.burst_count = 2 if self.hburst.value == 2 else 1
+                        data = await self.hwdata.read()
+                        await self.write(self.haddr.value, data)
+                        self.haddr.value += 4  # Increment address for burst
+                elif self.hburst.value == 0:  # Single transfer
+                    size = 2 if self.hburst.value == 2 else 1
+                    data = await self.read(self.haddr.value, size)
+                    await self.hrdata.write(data)
                 else:  # Burst transfer
-                    size = 2 if self.dut.hburst.value == 2 else 1
-                    data = await self.read(self.dut.haddr.value, size)
-                    await self.dut.hrdata.write(data)
-                    self.dut.haddr.value += 4  # Increment address for burst
+                    size = 2 if self.hburst.value == 2 else 1
+                    data = await self.read(self.haddr.value, size)
+                    await self.hrdata.write(data)
+                    self.haddr.value += 4  # Increment address for burst
                     self.burst_count -= 1
                     if self.burst_count == 0:
-                        self.dut.hready.value = 1
-                        self.dut.hresp.value = 0  # No error
-                for _ in range(self.hready_delay):
-                    await RisingEdge(self.clk)
+                        self.hready.value = 1
+                        self.hresp.value = 0  # No error
+                
             else:
-                self.dut.hready.value = 0
+                self.hready.value = 0
 
     def set_hready_delay(self, delay):
         self.hready_delay = delay
