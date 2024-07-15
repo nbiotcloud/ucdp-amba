@@ -115,7 +115,7 @@ def test_generic(test):
                 f"{sim_build}/{top}.stems",
                 "-f",
                 f"{sim_build}/dump.fst",
-                "-a",
+                "-a" if restore else "",
                 restore,
                 "-r",
                 ".gtkwaverc",
