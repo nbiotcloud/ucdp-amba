@@ -183,10 +183,10 @@ class AHBMasterDriver:
         self.htrans.value = 0  # IDLE
 
 
-class AHBSlave:
+class AHBSlaveDriver:
     """Active AHB Slave that can respond to Master requests."""
 
-    def __init__(self, clk, rst_an, haddr, hwrite, hwdata, htrans, hburst, hsize, hrdata, hready, hresp, hsel, hprot=None, hready_delay=0, size_bytes=1024):
+    def __init__(self, clk, rst_an, haddr, hwrite, hwdata, htrans, hburst, hsize, hrdata, hready, hreadyout, hresp, hsel, hprot=None, hreadyout_delay=0, size_bytes=1024):
         self.clk = clk
         self.rst_an = rst_an
         self.haddr = haddr
@@ -197,14 +197,19 @@ class AHBSlave:
         self.hsize = hsize
         self.hrdata = hrdata
         self.hready = hready
+        self.hreadyout = hreadyout
         self.hresp = hresp
         self.hsel = hsel
         self.hprot = hprot  # allowed to be None as it might not be present (e.g. Multilayer input)
 
         self.mem = bytearray(size_bytes)  # Initialize a 1KB memory
-        self.hready_delay = hready_delay  # Delay for HREADY signal
+        self.hreadyout_delay = hreadyout_delay  # Delay for HREADYOUT signal to simulate longer access times
         self.burst_count = 0  # Burst count for burst transactions
         self.state = 0
+        self.curr_addr = None
+        self.curr_wdata = None
+        self.curr_write = None
+        self.curr_size = None
 
     async def read(self, addr, size):
         # Read data from memory
@@ -213,46 +218,38 @@ class AHBSlave:
             data.append(self.mem[addr + i])
         return data
 
-    async def write(self, addr, data):
-        # Write data to memory
-        for i, byte in enumerate(data):
-            self.mem[addr + i] = byte
+    async def write(self, addr, size, data):
+        byte_cnt = 2**size
+        print(data)
+        bytes = data.buff
+        # TODO shift/slice based on addr and size
+        self.mem[addr:addr+byte_cnt+1] = bytes
 
     async def run(self):
         while True:
-            self.hready.value = 1
-            self.hrdata = 0
+            self.hreadyout.value = 1
+            self.hrdata.value = 0
             await RisingEdge(self.clk)
             # Check if there's an AHB request
             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
-                for _ in range(self.hready_delay):  # delay the answer if configured
+                self.curr_addr = self.haddr.value
+                self.curr_write = self.hwrite.value
+                self.curr_wdata = self.hwdata.value if self.curr_write else 0
+                self.curr_size = self.hsize.value
+                for _ in range(self.hreadyout_delay):  # delay the answer if configured
                     await RisingEdge(self.clk)
-                if self.hwrite.value:
+                    self.hreadyout.value = 0
+                self.hreadyout.value = 1
+                if self.curr_write:
                     # Handle write request
-                    if self.hburst.value == BurstType.SINGLE:  # Single transfer
-                        data = await self.hwdata.read()
-                        await self.write(self.haddr.value, data)
-                    else:  # Burst transfer
-                        self.burst_count = 2 if self.hburst.value == 2 else 1
-                        data = await self.hwdata.read()
-                        await self.write(self.haddr.value, data)
-                        self.haddr.value += 4  # Increment address for burst
-                elif self.hburst.value == 0:  # Single transfer
-                    size = 2 if self.hburst.value == 2 else 1
-                    data = await self.read(self.haddr.value, size)
-                    await self.hrdata.write(data)
-                else:  # Burst transfer
-                    size = 2 if self.hburst.value == 2 else 1
-                    data = await self.read(self.haddr.value, size)
-                    await self.hrdata.write(data)
-                    self.haddr.value += 4  # Increment address for burst
-                    self.burst_count -= 1
-                    if self.burst_count == 0:
-                        self.hready.value = 1
-                        self.hresp.value = 0  # No error
+                    await self.write(self.curr_addr, self.curr_size, self.curr_wdata)
+                else:
+                    # Handle read request
+                    await self.read(self.curr_addr, self.curr_size)
                 
-            else:
-                self.hready.value = 0
 
-    def set_hready_delay(self, delay):
-        self.hready_delay = delay
+    def set_hreadyout_delay(self, delay):
+        self.hreadyout_delay = delay
+
+    def set_data(self, data):
+        self.mem = data

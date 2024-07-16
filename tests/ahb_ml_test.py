@@ -1,5 +1,5 @@
 import cocotb
-from ahb_driver import AHBMasterDriver, BurstType
+from ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Combine
 
@@ -32,8 +32,8 @@ async def ahb_ml_test(dut):
     )
 
     dsp_mst = AHBMasterDriver(
-        hclk,
-        rst_an,
+        clk=hclk,
+        rst_an=rst_an,
         haddr=dut.ahb_mst_dsp_haddr_i,
         hwrite=dut.ahb_mst_dsp_hwrite_i,
         hwdata=dut.ahb_mst_dsp_hwdata_i,
@@ -47,11 +47,29 @@ async def ahb_ml_test(dut):
         hsel=None,
     )
 
+    ram_slv = AHBSlaveDriver(
+        clk=hclk,
+        rst_an=rst_an,
+        hsel=dut.ahb_slv_ram_hsel_o,
+        haddr=dut.ahb_slv_ram_haddr_o,
+        hwrite=dut.ahb_slv_ram_hwrite_o,
+        htrans=dut.ahb_slv_ram_htrans_o,
+        hsize=dut.ahb_slv_ram_hsize_o,
+        hburst=dut.ahb_slv_ram_hburst_o,
+        hprot=dut.ahb_slv_ram_hprot_o,
+        hwdata=dut.ahb_slv_ram_hwdata_o,
+        hready=dut.ahb_slv_ram_hready_o,
+        hreadyout=dut.ahb_slv_ram_hreadyout_i,
+        hresp=dut.ahb_slv_ram_hresp_i,
+        hrdata=dut.ahb_slv_ram_hrdata_i,
+    )
+
     hclk_proc = cocotb.start_soon(Clock(hclk, period=10).start())
+
+    ram_slv_proc = cocotb.start_soon(ram_slv.run())
 
     # initial reset
     rst_an.value = 0
-    dut.ahb_slv_ram_hreadyout_i.value = 1
     await wait_clocks(hclk, 10)
     rst_an.value = 1
     await wait_clocks(hclk, 10)
@@ -65,6 +83,4 @@ async def ahb_ml_test(dut):
     
     rdata = await ext_mst.read(0xF0000100, burst_type=BurstType.WRAP4)
 
-    await wait_clocks(hclk, 10)
-    await wait_clocks(hclk, 10)
-    await wait_clocks(hclk, 10)
+    await wait_clocks(hclk, 30)
