@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import Iterable, List, Tuple
 
 from cocotb.triggers import RisingEdge
 
@@ -37,6 +38,31 @@ class SizeType(IntEnum):
     WORD16 = 6  # 512-bit
     WORD32 = 7  # 1024-bit
 
+def _prep_addr_iter(addr:int, burst_length:int, size:SizeType, burst_type=BurstType) ->Tuple[int, int, int, int]:
+    """Prepare Address Iterations."""
+    match burst_type:
+        case BurstType.INCR16 | BurstType.WRAP16:
+            mask = (1<<(size+4))-1
+            len = 16
+        case BurstType.INCR8 | BurstType.WRAP8:
+            mask = (1<<(size+3))-1
+            len = 8
+        case BurstType.INCR4 | BurstType.WRAP4:
+            mask = (1<<(size+2))-1
+            len = 4
+        case BurstType.INCR:
+            mask = -1
+            len = burst_length
+        case other:
+            mask = -1
+            len = 1
+    base = addr & ~mask
+    offs = addr & mask
+    if (burst_type == BurstType.INCR16) or (burst_type == BurstType.INCR8) or (burst_type == BurstType.INCR4):
+        if offs != 0:
+            raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
+    return (base, offs, mask, len)
+
 
 class AHBMasterDriver:
     """AHB Master bus driver."""
@@ -58,8 +84,18 @@ class AHBMasterDriver:
         self.hresp = hresp
         self.hsel = hsel  # allowed to be None as it might not be present (e.g. Multilayer input)
 
-    async def write(self, addr, data, size=SizeType.WORD, burst_length=1, burst_type=BurstType.SINGLE):
-        self.haddr.value = addr
+
+    async def write(self, addr:int, data:int|Iterable, size:SizeType=SizeType.WORD,
+                    burst_length:int=1, burst_type:BurstType=BurstType.SINGLE) -> None:
+        """AHB Write (Burst)."""
+
+        if isinstance(data, int):
+            data = iter((data, ))
+        else:
+            data = iter(data)
+        base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
+                                                         size=size, burst_type=burst_type)
+        self.haddr.value = base + offs
         self.hwdata.value = 0
         self.hwrite.value = 1
         if self.hsel:
@@ -68,33 +104,57 @@ class AHBMasterDriver:
         self.hburst.value = burst_type
         self.hsize.value = size
         await RisingEdge(self.clk)
-        self.haddr.value = 0
-        self.hwdata.value = data
-        self.hwrite.value = 0
-        self.htrans.value = TransType.IDLE
-        # TODO wait for ready
         for _ in range(burst_length - 1):
             self.htrans.value = TransType.SEQ
-            self.hwdata.value = data
+            offs = (offs + (1<<size)) & mask
+            self.haddr.value = base + offs
+            self.hwdata.value = next(data)
             await RisingEdge(self.clk)
+            while self.hready == 0:
+                await RisingEdge(self.clk)
         if self.hsel:
             self.hsel.value = 0
-
-    async def read(self, addr, burst_length=1, burst_type=BurstType.SINGLE):
-        self.bus.value = addr
+        self.haddr.value = 0
+        self.hwdata.value = next(data)
+        self.hwrite.value = 0
+        self.htrans.value = TransType.IDLE
         await RisingEdge(self.clk)
+        while self.hready == 0:
+            await RisingEdge(self.clk)
+        self.hwdata.value = 0
+
+    async def read(self, addr:int, burst_length:int=1, size:SizeType=SizeType.WORD, 
+                   burst_type:BurstType=BurstType.SINGLE) ->List[int]:
+        """AHB Read (Burst)."""
+
+        rdata = []
+        base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
+                                                         size=size, burst_type=burst_type)
+        self.haddr.value = base + offs
         if self.hsel:
             self.hsel.value = 1
         self.hwrite.value = 0
         self.htrans.value = TransType.NONSEQ
         self.hburst.value = burst_type
+        await RisingEdge(self.clk)
+
         for _ in range(burst_length - 1):
-            self.hsel.value = 1
             self.htrans.value = TransType.SEQ
+            offs = (offs + (1<<size)) & mask
+            self.haddr.value = base + offs
             await RisingEdge(self.clk)
+            while self.hready == 0:
+                await RisingEdge(self.clk)
+            rdata.append(self.hrdata.value)
         if self.hsel:
             self.hsel.value = 0
-        return self.hrdata.value
+        self.haddr.value = 0
+        self.htrans.value = TransType.IDLE
+        await RisingEdge(self.clk)
+        while self.hready == 0:
+            await RisingEdge(self.clk)
+        rdata.append(self.hrdata.value)
+        return rdata
 
     async def reset(self):
         if self.hsel:

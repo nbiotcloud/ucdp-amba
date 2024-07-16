@@ -1,7 +1,7 @@
 import cocotb
-from ahb_driver import AHBMasterDriver
+from ahb_driver import AHBMasterDriver, BurstType
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Combine
 
 
 # TODO put this is a generic tb lib
@@ -51,11 +51,19 @@ async def ahb_ml_test(dut):
 
     # initial reset
     rst_an.value = 0
+    dut.ahb_slv_ram_hreadyout_i.value = 1
     await wait_clocks(hclk, 10)
     rst_an.value = 1
     await wait_clocks(hclk, 10)
 
-    await ext_mst.write(0xF0000000, 0xAFFEAFFE)
+    ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0xAFFEAFFE))
+    dsp_wr = cocotb.start_soon(dsp_mst.write(0xF0000014, (0xBEEFBEEF, 0xff, 0xaa, 0xBB),
+                                             burst_type=BurstType.WRAP4))
+
+    await Combine(ext_wr, dsp_wr)
+
+    
+    rdata = await ext_mst.read(0xF0000100, burst_type=BurstType.WRAP4)
 
     await wait_clocks(hclk, 10)
     await wait_clocks(hclk, 10)
