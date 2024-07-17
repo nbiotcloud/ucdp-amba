@@ -58,10 +58,18 @@ def _prep_addr_iter(addr:int, burst_length:int, size:SizeType, burst_type=BurstT
             len = 1
     base = addr & ~mask
     offs = addr & mask
+    return (base, offs, mask, len)
+
+def _check_bus_acc(data_width:int, addr:int, offs:int, size:SizeType, burst_type=BurstType) -> None:
+    """Cehck AHB Bus Access."""
+
+    if data_width < (8 << size):
+        raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {data_width}!")
+    if (addr & ((1 << size)-1)) != 0:
+        raise ValueError(f"Address {addr:x} is not aligned to size argument {size!r}!")
     if (burst_type == BurstType.INCR16) or (burst_type == BurstType.INCR8) or (burst_type == BurstType.INCR4):
         if offs != 0:
             raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
-    return (base, offs, mask, len)
 
 
 class SlaveFsmState(IntEnum):
@@ -97,14 +105,14 @@ class AHBMasterDriver:
                     burst_length:int=1, burst_type:BurstType=BurstType.SINGLE) -> None:
         """AHB Write (Burst)."""
 
-        if self.data_width < (8 << size):
-            raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {self.data_width}!")
+        base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
+                                                         size=size, burst_type=burst_type)
+        _check_bus_acc(data_width=self.data_width, addr=addr, offs=offs, size=size, burst_type=burst_type)
+
         if isinstance(data, int):
             data = iter((data, ))
         else:
             data = iter(data)
-        base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
-                                                         size=size, burst_type=burst_type)
         shmsk = self.data_width - 1
         self.haddr.value = base + offs
         self.hwdata.value = 0
@@ -129,23 +137,25 @@ class AHBMasterDriver:
         self.hwdata.value = next(data) << ((offs<<3) & shmsk)
         self.hwrite.value = 0
         self.htrans.value = TransType.IDLE
+        self.hburst.value = BurstType.SINGLE
+        self.hsize.value = SizeType.BYTE
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
         self.hwdata.value = 0
 
     async def read(self, addr:int, burst_length:int=1, size:SizeType=SizeType.WORD, 
-                   burst_type:BurstType=BurstType.SINGLE) ->List[int]:
+                   burst_type:BurstType=BurstType.SINGLE) ->Tuple[int]:
         """AHB Read (Burst)."""
 
-        if self.data_width < (8 << size):
-            raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {self.data_width}!")
-        rdata = []
         base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
                                                          size=size, burst_type=burst_type)
-        shmsk = self.data_width - 1
-        szmsk = (8 << size) - 1
+        _check_bus_acc(data_width=self.data_width, addr=addr, offs=offs, size=size, burst_type=burst_type)
+
+        rdata = []
         poffs = offs
+        shmsk = self.data_width - 1
+        szmsk = (1 << (8 << size)) - 1
         self.haddr.value = base + offs
         if self.hsel:
             self.hsel.value = 1
@@ -161,7 +171,7 @@ class AHBMasterDriver:
             await RisingEdge(self.clk)
             while self.hready == 0:
                 await RisingEdge(self.clk)
-            rdata.append((self.hrdata.value >> ((poffs<<3) & shmsk)) & szmsk)
+            rdata.append((self.hrdata.value.integer >> ((poffs<<3) & shmsk)) & szmsk)
             poffs = offs
         if self.hsel:
             self.hsel.value = 0
@@ -170,8 +180,8 @@ class AHBMasterDriver:
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
-        rdata.append((self.hrdata.value >> ((poffs<<3) & shmsk)) & szmsk)
-        return rdata
+        rdata.append((self.hrdata.value.integer >> ((poffs<<3) & shmsk)) & szmsk)
+        return tuple(rdata)
 
     async def reset(self):
         if self.hsel:
