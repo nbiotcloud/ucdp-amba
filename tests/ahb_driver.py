@@ -204,8 +204,11 @@ class AHBSlaveDriver:
 
         self.mem = bytearray(size_bytes)  # Initialize a 1KB memory
         self.hreadyout_delay = hreadyout_delay  # Delay for HREADYOUT signal to simulate longer access times
-        self.burst_count = 0  # Burst count for burst transactions
+        self.addrmask = size_bytes - 1
+
+        # state variables
         self.state = 0
+        self.burst_count = 0  # Burst count for burst transactions
         self.curr_addr = None
         self.curr_wdata = None
         self.curr_write = None
@@ -219,11 +222,25 @@ class AHBSlaveDriver:
         return data
 
     async def write(self, addr, size, data):
+        # number of bytes in this transfer according to transfer size 
         byte_cnt = 2**size
-        print(data)
+        # extract the data from the bus
+        alignmask = byte_cnt-1
+        lower_addrmask = (byte_cnt*2)-1
+        lower_datamask = (byte_cnt*8)-1
+        datashift_byte = addr.integer & lower_addrmask
+        datashift_bit = datashift_byte * 8
+        unaligned = alignmask & addr.integer
+        if unaligned:
+            raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
+        # TODO confirm alignment
+        wdata = (data.integer >> datashift_bit) & lower_datamask
+
+        masked_addr = self.addrmask & addr.integer
+        print("==WRITE TRANSFER== DATA:", hex(data), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
         bytes = data.buff
-        # TODO shift/slice based on addr and size
-        self.mem[addr:addr+byte_cnt+1] = bytes
+
+        self.mem[masked_addr:masked_addr+byte_cnt] = bytes
 
     async def run(self):
         while True:
@@ -234,12 +251,13 @@ class AHBSlaveDriver:
             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
                 self.curr_addr = self.haddr.value
                 self.curr_write = self.hwrite.value
-                self.curr_wdata = self.hwdata.value if self.curr_write else 0
                 self.curr_size = self.hsize.value
                 for _ in range(self.hreadyout_delay):  # delay the answer if configured
                     await RisingEdge(self.clk)
                     self.hreadyout.value = 0
                 self.hreadyout.value = 1
+                await RisingEdge(self.clk)
+                self.curr_wdata = self.hwdata.value if self.curr_write else 0
                 if self.curr_write:
                     # Handle write request
                     await self.write(self.curr_addr, self.curr_size, self.curr_wdata)
