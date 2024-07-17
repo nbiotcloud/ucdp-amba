@@ -90,18 +90,22 @@ class AHBMasterDriver:
         self.hready = hready
         self.hresp = hresp
         self.hsel = hsel  # allowed to be None as it might not be present (e.g. Multilayer input)
+        self.data_width = len(hwdata)
 
 
     async def write(self, addr:int, data:int|Iterable, size:SizeType=SizeType.WORD,
                     burst_length:int=1, burst_type:BurstType=BurstType.SINGLE) -> None:
         """AHB Write (Burst)."""
 
+        if self.data_width < (8 << size):
+            raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {self.data_width}!")
         if isinstance(data, int):
             data = iter((data, ))
         else:
             data = iter(data)
         base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
                                                          size=size, burst_type=burst_type)
+        shmsk = self.data_width - 1
         self.haddr.value = base + offs
         self.hwdata.value = 0
         self.hwrite.value = 1
@@ -113,16 +117,16 @@ class AHBMasterDriver:
         await RisingEdge(self.clk)
         for _ in range(burst_length - 1):
             self.htrans.value = TransType.SEQ
+            self.hwdata.value = next(data) << ((offs<<3) & shmsk)
             offs = (offs + (1<<size)) & mask
             self.haddr.value = base + offs
-            self.hwdata.value = next(data)
             await RisingEdge(self.clk)
             while self.hready == 0:
                 await RisingEdge(self.clk)
         if self.hsel:
             self.hsel.value = 0
         self.haddr.value = 0
-        self.hwdata.value = next(data)
+        self.hwdata.value = next(data) << ((offs<<3) & shmsk)
         self.hwrite.value = 0
         self.htrans.value = TransType.IDLE
         await RisingEdge(self.clk)
@@ -134,9 +138,14 @@ class AHBMasterDriver:
                    burst_type:BurstType=BurstType.SINGLE) ->List[int]:
         """AHB Read (Burst)."""
 
+        if self.data_width < (8 << size):
+            raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {self.data_width}!")
         rdata = []
         base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
                                                          size=size, burst_type=burst_type)
+        shmsk = self.data_width - 1
+        szmsk = (8 << size) - 1
+        poffs = offs
         self.haddr.value = base + offs
         if self.hsel:
             self.hsel.value = 1
@@ -152,7 +161,8 @@ class AHBMasterDriver:
             await RisingEdge(self.clk)
             while self.hready == 0:
                 await RisingEdge(self.clk)
-            rdata.append(self.hrdata.value)
+            rdata.append((self.hrdata.value >> ((poffs<<3) & shmsk)) & szmsk)
+            poffs = offs
         if self.hsel:
             self.hsel.value = 0
         self.haddr.value = 0
@@ -160,7 +170,7 @@ class AHBMasterDriver:
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
-        rdata.append(self.hrdata.value)
+        rdata.append((self.hrdata.value >> ((poffs<<3) & shmsk)) & szmsk)
         return rdata
 
     async def reset(self):

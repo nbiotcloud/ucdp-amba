@@ -1,5 +1,5 @@
 import cocotb
-from ahb_driver import AHBMasterDriver, BurstType
+from ahb_driver import AHBMasterDriver, BurstType, SizeType
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Combine
 
@@ -57,8 +57,8 @@ async def ahb_ml_test(dut):
     await wait_clocks(hclk, 10)
 
     ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0xAFFEAFFE))
-    dsp_wr = cocotb.start_soon(dsp_mst.write(0xF0000014, (0xBEEFBEEF, 0xff, 0xaa, 0xBB),
-                                             burst_type=BurstType.WRAP4))
+    dsp_wr = cocotb.start_soon(dsp_mst.write(0xF0000014, (0x11, 0x22, 0x33, 0x44),
+                                             burst_type=BurstType.WRAP4, size=SizeType.WORD))
 
     await Combine(ext_wr, dsp_wr)
 
