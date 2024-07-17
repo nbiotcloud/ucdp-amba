@@ -249,7 +249,7 @@ class AHBSlaveDriver:
 
         masked_addr = self.addrmask & addr.integer
 
-        rdata = self.mem[masked_addr:masked_addr+byte_cnt]
+        rdata = int.from_bytes(self.mem[masked_addr:masked_addr+byte_cnt]) << datashift_bit
         return rdata
 
     def write(self, addr, size, data):
@@ -300,7 +300,7 @@ class AHBSlaveDriver:
                 else:
                     # Handle read request
                     rdata = self.read(self.curr_addr, self.curr_size)
-
+                    self.hrdata.value = rdata
                 
 
     def set_hreadyout_delay(self, delay):

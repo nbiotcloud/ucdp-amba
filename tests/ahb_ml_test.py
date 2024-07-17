@@ -70,7 +70,6 @@ async def ahb_ml_test(dut):
 
     # initial reset
     rst_an.value = 0
-    dut.ahb_slv_ram_hrdata_i.value = 0x76543210
     await wait_clocks(hclk, 10)
     rst_an.value = 1
     await wait_clocks(hclk, 10)
@@ -82,7 +81,7 @@ async def ahb_ml_test(dut):
     await Combine(ext_wr, dsp_wr)
 
     
-    rdata = await ext_mst.read(0xF0000100, burst_type=BurstType.INCR8, size=SizeType.WORD)
+    rdata = await ext_mst.read(0xF0000000, burst_type=BurstType.INCR8, size=SizeType.WORD)
     print("BOZO", [hex(data) for data in rdata])
 
     await wait_clocks(hclk, 30)
