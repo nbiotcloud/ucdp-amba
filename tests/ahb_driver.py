@@ -58,10 +58,18 @@ def _prep_addr_iter(addr:int, burst_length:int, size:SizeType, burst_type=BurstT
             len = 1
     base = addr & ~mask
     offs = addr & mask
+    return (base, offs, mask, len)
+
+def _check_bus_acc(data_width:int, addr:int, offs:int, size:SizeType, burst_type=BurstType) -> None:
+    """Cehck AHB Bus Access."""
+
+    if data_width < (8 << size):
+        raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {data_width}!")
+    if (addr & ((1 << size)-1)) != 0:
+        raise ValueError(f"Address {addr:x} is not aligned to size argument {size!r}!")
     if (burst_type == BurstType.INCR16) or (burst_type == BurstType.INCR8) or (burst_type == BurstType.INCR4):
         if offs != 0:
             raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
-    return (base, offs, mask, len)
 
 
 class SlaveFsmState(IntEnum):
@@ -90,18 +98,22 @@ class AHBMasterDriver:
         self.hready = hready
         self.hresp = hresp
         self.hsel = hsel  # allowed to be None as it might not be present (e.g. Multilayer input)
+        self.data_width = len(hwdata)
 
 
     async def write(self, addr:int, data:int|Iterable, size:SizeType=SizeType.WORD,
                     burst_length:int=1, burst_type:BurstType=BurstType.SINGLE) -> None:
         """AHB Write (Burst)."""
 
+        base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
+                                                         size=size, burst_type=burst_type)
+        _check_bus_acc(data_width=self.data_width, addr=addr, offs=offs, size=size, burst_type=burst_type)
+
         if isinstance(data, int):
             data = iter((data, ))
         else:
             data = iter(data)
-        base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
-                                                         size=size, burst_type=burst_type)
+        shmsk = self.data_width - 1
         self.haddr.value = base + offs
         self.hwdata.value = 0
         self.hwrite.value = 1
@@ -113,30 +125,37 @@ class AHBMasterDriver:
         await RisingEdge(self.clk)
         for _ in range(burst_length - 1):
             self.htrans.value = TransType.SEQ
+            self.hwdata.value = next(data) << ((offs<<3) & shmsk)
             offs = (offs + (1<<size)) & mask
             self.haddr.value = base + offs
-            self.hwdata.value = next(data)
             await RisingEdge(self.clk)
             while self.hready == 0:
                 await RisingEdge(self.clk)
         if self.hsel:
             self.hsel.value = 0
         self.haddr.value = 0
-        self.hwdata.value = next(data)
+        self.hwdata.value = next(data) << ((offs<<3) & shmsk)
         self.hwrite.value = 0
         self.htrans.value = TransType.IDLE
+        self.hburst.value = BurstType.SINGLE
+        self.hsize.value = SizeType.BYTE
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
         self.hwdata.value = 0
 
     async def read(self, addr:int, burst_length:int=1, size:SizeType=SizeType.WORD, 
-                   burst_type:BurstType=BurstType.SINGLE) ->List[int]:
+                   burst_type:BurstType=BurstType.SINGLE) ->Tuple[int]:
         """AHB Read (Burst)."""
 
-        rdata = []
         base, offs, mask, burst_length = _prep_addr_iter(addr=addr, burst_length=burst_length,
                                                          size=size, burst_type=burst_type)
+        _check_bus_acc(data_width=self.data_width, addr=addr, offs=offs, size=size, burst_type=burst_type)
+
+        rdata = []
+        poffs = offs
+        shmsk = self.data_width - 1
+        szmsk = (1 << (8 << size)) - 1
         self.haddr.value = base + offs
         if self.hsel:
             self.hsel.value = 1
@@ -152,7 +171,8 @@ class AHBMasterDriver:
             await RisingEdge(self.clk)
             while self.hready == 0:
                 await RisingEdge(self.clk)
-            rdata.append(self.hrdata.value)
+            rdata.append((self.hrdata.value.integer >> ((poffs<<3) & shmsk)) & szmsk)
+            poffs = offs
         if self.hsel:
             self.hsel.value = 0
         self.haddr.value = 0
@@ -160,8 +180,8 @@ class AHBMasterDriver:
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
-        rdata.append(self.hrdata.value)
-        return rdata
+        rdata.append((self.hrdata.value.integer >> ((poffs<<3) & shmsk)) & szmsk)
+        return tuple(rdata)
 
     async def reset(self):
         if self.hsel:
@@ -214,14 +234,25 @@ class AHBSlaveDriver:
         self.curr_write = None
         self.curr_size = None
 
-    async def read(self, addr, size):
-        # Read data from memory
-        data = bytearray()
-        for i in range(size):
-            data.append(self.mem[addr + i])
-        return data
+    def read(self, addr, size):
+        # number of bytes in this transfer according to transfer size 
+        byte_cnt = 2**size
+        # extract the data from the bus
+        alignmask = byte_cnt-1
+        lower_addrmask = (byte_cnt*2)-1
+        lower_datamask = (byte_cnt*8)-1
+        datashift_byte = addr.integer & lower_addrmask
+        datashift_bit = datashift_byte * 8
+        unaligned = alignmask & addr.integer
+        if unaligned:
+            raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
 
-    async def write(self, addr, size, data):
+        masked_addr = self.addrmask & addr.integer
+
+        rdata = self.mem[masked_addr:masked_addr+byte_cnt]
+        return rdata
+
+    def write(self, addr, size, data):
         # number of bytes in this transfer according to transfer size 
         byte_cnt = 2**size
         # extract the data from the bus
@@ -246,7 +277,8 @@ class AHBSlaveDriver:
         while True:
             self.hreadyout.value = 1
             self.hrdata.value = 0
-            await RisingEdge(self.clk)
+            if not self.state:
+                await RisingEdge(self.clk)
             # Check if there's an AHB request
             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
                 self.curr_addr = self.haddr.value
@@ -257,13 +289,18 @@ class AHBSlaveDriver:
                     self.hreadyout.value = 0
                 self.hreadyout.value = 1
                 await RisingEdge(self.clk)
+                if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
+                    self.state = 1
+                else:
+                    self.state = 0
                 self.curr_wdata = self.hwdata.value if self.curr_write else 0
                 if self.curr_write:
                     # Handle write request
-                    await self.write(self.curr_addr, self.curr_size, self.curr_wdata)
+                    self.write(self.curr_addr, self.curr_size, self.curr_wdata)
                 else:
                     # Handle read request
-                    await self.read(self.curr_addr, self.curr_size)
+                    rdata = self.read(self.curr_addr, self.curr_size)
+
                 
 
     def set_hreadyout_delay(self, delay):
