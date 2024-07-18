@@ -11,5 +11,9 @@
     "verilog.linting.verilator.useWSL": false,
     "python.defaultInterpreterPath": ".nox/test/bin/python",
     "python.terminal.activateEnvInCurrentTerminal": false
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": []
   }
 }

@@ -54,7 +54,7 @@ def _prep_addr_iter(addr: int, burst_length: int, size: SizeType, burst_type=Bur
         case BurstType.INCR:
             mask = -1
             len = burst_length
-        case other:
+        case other:  # SINGLE
             mask = -1
             len = 1
     base = addr & ~mask
@@ -110,6 +110,7 @@ class AHBMasterDriver:
         burst_type: BurstType = BurstType.SINGLE,
     ) -> None:
         """AHB Write (Burst)."""
+
         base, offs, mask, burst_length = _prep_addr_iter(
             addr=addr, burst_length=burst_length, size=size, burst_type=burst_type
         )
@@ -169,6 +170,7 @@ class AHBMasterDriver:
         self.hwrite.value = 0
         self.htrans.value = TransType.NONSEQ
         self.hburst.value = burst_type
+        self.hsize.value = size
         await RisingEdge(self.clk)
 
         for _ in range(burst_length - 1):
@@ -184,6 +186,7 @@ class AHBMasterDriver:
             self.hsel.value = 0
         self.haddr.value = 0
         self.htrans.value = TransType.IDLE
+        self.hsize.value = SizeType.BYTE
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
@@ -210,7 +213,7 @@ class AHBMasterDriver:
         self.htrans.value = 0  # IDLE
 
 
-class AHBSlave:
+class AHBSlaveDriver:
     """Active AHB Slave that can respond to Master requests."""
 
     def __init__(
@@ -225,10 +228,11 @@ class AHBSlave:
         hsize,
         hrdata,
         hready,
+        hreadyout,
         hresp,
         hsel,
         hprot=None,
-        hready_delay=0,
+        hreadyout_delay=0,
         size_bytes=1024,
     ):
         self.clk = clk
@@ -241,62 +245,148 @@ class AHBSlave:
         self.hsize = hsize
         self.hrdata = hrdata
         self.hready = hready
+        self.hreadyout = hreadyout
         self.hresp = hresp
         self.hsel = hsel
         self.hprot = hprot  # allowed to be None as it might not be present (e.g. Multilayer input)
+        self.data_width = len(hwdata)
 
         self.mem = bytearray(size_bytes)  # Initialize a 1KB memory
-        self.hready_delay = hready_delay  # Delay for HREADY signal
-        self.burst_count = 0  # Burst count for burst transactions
+        self.hreadyout_delay = hreadyout_delay  # Delay for HREADYOUT signal to simulate longer access times
+        self.addrmask = size_bytes - 1
+
+        # state variables
         self.state = 0
+        self.burst_count = 0  # Burst count for burst transactions
+        self.curr_addr = None
+        self.curr_wdata = None
+        self.curr_write = None
+        self.curr_size = None
 
-    async def read(self, addr, size):
-        # Read data from memory
-        data = bytearray()
-        for i in range(size):
-            data.append(self.mem[addr + i])
-        return data
+    def read(self, addr, size):
+        # number of bytes in this transfer according to transfer size
+        byte_cnt = 2**size
+        # extract the data from the bus
+        alignmask = byte_cnt - 1
+        # lower_addrmask = (byte_cnt * 2) - 1
+        # lower_datamask = (byte_cnt * 8) - 1
+        shmsk = self.data_width - 1
+        # datashift_byte = addr.integer & lower_addrmask
+        # datashift_bit = (datashift_byte * 8) & shmsk
+        datashift_bit = (addr.integer << 3) & shmsk
+        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask", hex(lower_datamask), "datashift_bit:", datashift_bit)
 
-    async def write(self, addr, data):
-        # Write data to memory
-        for i, byte in enumerate(data):
-            self.mem[addr + i] = byte
+        unaligned = alignmask & addr.integer
+        if unaligned:
+            raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
+
+        masked_addr = self.addrmask & addr.integer
+
+        rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt]) << datashift_bit
+
+        print("READ TRANSFER DATA:", hex(rdata), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
+        return rdata
+
+    def write(self, addr, size, data):
+        # number of bytes in this transfer according to transfer size
+        byte_cnt = 2**size
+        shmsk = self.data_width - 1
+        # extract the data from the bus
+        alignmask = byte_cnt - 1
+        # lower_addrmask = (byte_cnt * 2) - 1
+        lower_datamask = (2 ** (byte_cnt * 8)) - 1
+        # datashift_byte = addr.integer & lower_addrmask
+        # datashift_bit = datashift_byte * 8
+        datashift_bit = (addr.integer << 3) & shmsk
+        unaligned = alignmask & addr.integer
+
+        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask", hex(lower_datamask), "datashift_bit:", datashift_bit)
+
+        if unaligned:
+            raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
+        # TODO confirm alignment
+        wdata = (data.integer >> datashift_bit) & lower_datamask
+
+        masked_addr = self.addrmask & addr.integer
+        bytes = int.to_bytes(wdata, byte_cnt, "little")
+        print(
+            "WRITE TRANSFER DATA:",
+            hex(wdata),
+            "BYTES:",
+            ",".join([hex(x) for x in bytes]),
+            "ADDR:",
+            hex(masked_addr),
+            "SIZE_BYTES:",
+            byte_cnt,
+        )
+
+        self.mem[masked_addr : masked_addr + byte_cnt] = bytes
+        # print("RAM_LEN:", len(self.mem))
+        print("RAM:", ",".join(hex(x) for x in self.mem[masked_addr:masked_addr+byte_cnt]))
+
+    # async def run(self):
+    #     while True:
+    #         self.hreadyout.value = 1
+    #         # self.hrdata.value = 0
+    #         if not self.state:
+    #             await RisingEdge(self.clk)
+    #         # Check if there's an AHB request
+    #         if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
+    #             self.curr_addr = self.haddr.value
+    #             self.curr_write = self.hwrite.value
+    #             self.curr_size = self.hsize.value
+    #             for _ in range(self.hreadyout_delay):  # delay the answer if configured
+    #                 await RisingEdge(self.clk)
+    #                 self.hreadyout.value = 0
+    #             self.hreadyout.value = 1
+    #             await RisingEdge(self.clk)
+    #             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
+    #                 self.state = 1
+    #             else:
+    #                 self.state = 0
+    #             self.curr_wdata = self.hwdata.value if self.curr_write else 0
+    #             if self.curr_write:
+    #                 # Handle write request
+    #                 self.write(self.curr_addr, self.curr_size, self.curr_wdata)
+    #             else:
+    #                 # Handle read request
+    #                 rdata = self.read(self.curr_addr, self.curr_size)
+    #                 print("BOZO", hex(rdata))
+    #                 self.hrdata.value = rdata  # 0x76543210
 
     async def run(self):
+        self.hreadyout.value = 1
+        self.hrdata.value = 0xdeaddead  # BOZO: not visible in waves?!?
         while True:
-            self.hready.value = 1
-            self.hrdata = 0
             await RisingEdge(self.clk)
+            # print("BOZO", self.state, self.htrans.value, self.haddr.value)
+            if self.state:
+                # for _ in range(self.hreadyout_delay):  # delay the answer if configured
+                #     await RisingEdge(self.clk)
+                #     self.hreadyout.value = 0
+                self.hreadyout.value = 1
+                self.curr_wdata = self.hwdata.value if self.curr_write else 0
+                if self.curr_write:
+                    # Handle write request
+                    self.write(self.curr_addr, self.curr_size, self.curr_wdata)
             # Check if there's an AHB request
             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
-                for _ in range(self.hready_delay):  # delay the answer if configured
-                    await RisingEdge(self.clk)
-                if self.hwrite.value:
-                    # Handle write request
-                    if self.hburst.value == BurstType.SINGLE:  # Single transfer
-                        data = await self.hwdata.read()
-                        await self.write(self.haddr.value, data)
-                    else:  # Burst transfer
-                        self.burst_count = 2 if self.hburst.value == 2 else 1
-                        data = await self.hwdata.read()
-                        await self.write(self.haddr.value, data)
-                        self.haddr.value += 4  # Increment address for burst
-                elif self.hburst.value == 0:  # Single transfer
-                    size = 2 if self.hburst.value == 2 else 1
-                    data = await self.read(self.haddr.value, size)
-                    await self.hrdata.write(data)
-                else:  # Burst transfer
-                    size = 2 if self.hburst.value == 2 else 1
-                    data = await self.read(self.haddr.value, size)
-                    await self.hrdata.write(data)
-                    self.haddr.value += 4  # Increment address for burst
-                    self.burst_count -= 1
-                    if self.burst_count == 0:
-                        self.hready.value = 1
-                        self.hresp.value = 0  # No error
-
+                self.curr_addr = self.haddr.value
+                self.curr_write = self.hwrite.value
+                self.curr_size = self.hsize.value
+                self.state = 1
             else:
-                self.hready.value = 0
+                self.state = 0
+            if self.state and not self.curr_write:
+                # Handle read request (need to apply read value for next cycle)
+                rdata = self.read(self.curr_addr, self.curr_size)
+                self.hrdata.value = rdata
+            else:
+                self.hrdata.value = 0xdeadbeef  # BOZOjust temp for debugging
+            # print("BOZO2", self.state)
 
-    def set_hready_delay(self, delay):
-        self.hready_delay = delay
+    def set_hreadyout_delay(self, delay):
+        self.hreadyout_delay = delay
+
+    def set_data(self, data):
+        self.mem = data

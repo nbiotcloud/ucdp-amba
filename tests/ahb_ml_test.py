@@ -1,8 +1,7 @@
 import cocotb
+from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 from cocotb.clock import Clock
 from cocotb.triggers import Combine, RisingEdge
-
-from tests.ahb_driver import AHBMasterDriver, BurstType, SizeType
 
 
 # TODO put this is a generic tb lib
@@ -33,8 +32,8 @@ async def ahb_ml_test(dut):
     )
 
     dsp_mst = AHBMasterDriver(
-        hclk,
-        rst_an,
+        clk=hclk,
+        rst_an=rst_an,
         haddr=dut.ahb_mst_dsp_haddr_i,
         hwrite=dut.ahb_mst_dsp_hwrite_i,
         hwdata=dut.ahb_mst_dsp_hwdata_i,
@@ -48,26 +47,40 @@ async def ahb_ml_test(dut):
         hsel=None,
     )
 
+    ram_slv = AHBSlaveDriver(
+        clk=hclk,
+        rst_an=rst_an,
+        hsel=dut.ahb_slv_ram_hsel_o,
+        haddr=dut.ahb_slv_ram_haddr_o,
+        hwrite=dut.ahb_slv_ram_hwrite_o,
+        htrans=dut.ahb_slv_ram_htrans_o,
+        hsize=dut.ahb_slv_ram_hsize_o,
+        hburst=dut.ahb_slv_ram_hburst_o,
+        hprot=dut.ahb_slv_ram_hprot_o,
+        hwdata=dut.ahb_slv_ram_hwdata_o,
+        hready=dut.ahb_slv_ram_hready_o,
+        hreadyout=dut.ahb_slv_ram_hreadyout_i,
+        hresp=dut.ahb_slv_ram_hresp_i,
+        hrdata=dut.ahb_slv_ram_hrdata_i,
+    )
+
     hclk_proc = cocotb.start_soon(Clock(hclk, period=10).start())
+
+    ram_slv_proc = cocotb.start_soon(ram_slv.run())
 
     # initial reset
     rst_an.value = 0
-    dut.ahb_slv_ram_hreadyout_i.value = 1
-    dut.ahb_slv_ram_hrdata_i.value = 0x76543210
     await wait_clocks(hclk, 10)
     rst_an.value = 1
     await wait_clocks(hclk, 10)
 
-    ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0xAFFEAFFE))
+    ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
     dsp_wr = cocotb.start_soon(
         dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
     )
-
     await Combine(ext_wr, dsp_wr)
 
-    rdata = await ext_mst.read(0xF0000100, burst_type=BurstType.INCR8, size=SizeType.WORD)
-    print("BOZO", [hex(data) for data in rdata])
+    rdata = await ext_mst.read(0xF0000000, burst_type=BurstType.INCR8, size=SizeType.BYTE)
+    print("MST EXT rdata:", [hex(data) for data in rdata])
 
-    await wait_clocks(hclk, 10)
-    await wait_clocks(hclk, 10)
-    await wait_clocks(hclk, 10)
+    await wait_clocks(hclk, 30)
