@@ -1,7 +1,7 @@
 import cocotb
-from ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
+from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Combine
+from cocotb.triggers import Combine, RisingEdge
 
 
 # TODO put this is a generic tb lib
@@ -75,10 +75,11 @@ async def ahb_ml_test(dut):
     await wait_clocks(hclk, 10)
 
     ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0xAFFEAFFE))
-    dsp_wr = cocotb.start_soon(dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44),
-                                             burst_type=BurstType.WRAP4, size=SizeType.HALFWORD))
+    dsp_wr = cocotb.start_soon(
+        dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
+    )
     await Combine(ext_wr, dsp_wr)
-    
+
     rdata = await ext_mst.read(0xF0000000, burst_type=BurstType.INCR8, size=SizeType.WORD)
     # print("BOZO", [hex(data) for data in rdata])
 
