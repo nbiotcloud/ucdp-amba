@@ -250,6 +250,8 @@ class AHBSlaveDriver:
         masked_addr = self.addrmask & addr.integer
 
         rdata = int.from_bytes(self.mem[masked_addr:masked_addr+byte_cnt]) << datashift_bit
+
+        print("READ TRANSFER DATA:", hex(rdata), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
         return rdata
 
     def write(self, addr, size, data):
