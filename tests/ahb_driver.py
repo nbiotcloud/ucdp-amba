@@ -258,20 +258,25 @@ class AHBSlaveDriver:
         # extract the data from the bus
         alignmask = byte_cnt-1
         lower_addrmask = (byte_cnt*2)-1
-        lower_datamask = (byte_cnt*8)-1
+        lower_datamask = (2**(byte_cnt*8))-1
         datashift_byte = addr.integer & lower_addrmask
         datashift_bit = datashift_byte * 8
         unaligned = alignmask & addr.integer
+
+        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask", hex(lower_datamask), "datashift_bit:", datashift_bit)
+
         if unaligned:
             raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
         # TODO confirm alignment
         wdata = (data.integer >> datashift_bit) & lower_datamask
 
         masked_addr = self.addrmask & addr.integer
-        print("==WRITE TRANSFER== DATA:", hex(data), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
-        bytes = data.buff
-
+        bytes = int.to_bytes(wdata, byte_cnt)
+        print("WRITE TRANSFER DATA:", hex(wdata), "BYTES:", "".join([hex(x) for x in bytes]), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
+        
         self.mem[masked_addr:masked_addr+byte_cnt] = bytes
+        # print("RAM_LEN:", len(self.mem))
+        # print("RAM:", "".join(hex(x) for x in self.mem[masked_addr:masked_addr+byte_cnt]))
 
     async def run(self):
         while True:
