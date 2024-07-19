@@ -1,17 +1,48 @@
+#
+# MIT License
+#
+# Copyright (c) 2024 nbiotcloud
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+"""
+Unified Chip Design Platform - AMBA - AHB Tests.
+"""
+
 import cocotb
-from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 from cocotb.clock import Clock
 from cocotb.triggers import Combine, RisingEdge
+
+from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 
 
 # TODO put this is a generic tb lib
 async def wait_clocks(clock, cycles):
+    """Helper Function."""
     for _ in range(cycles):
         await RisingEdge(clock)
 
 
 @cocotb.test()
 async def ahb_ml_test(dut):
+    """Main Test Loop."""
     hclk = dut.main_clk_i
     rst_an = dut.main_rst_an_i
 
@@ -64,9 +95,9 @@ async def ahb_ml_test(dut):
         hrdata=dut.ahb_slv_ram_hrdata_i,
     )
 
-    hclk_proc = cocotb.start_soon(Clock(hclk, period=10).start())
+    cocotb.start_soon(Clock(hclk, period=10).start())
 
-    ram_slv_proc = cocotb.start_soon(ram_slv.run())
+    cocotb.start_soon(ram_slv.run())
 
     # initial reset
     rst_an.value = 0

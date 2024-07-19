@@ -1,3 +1,31 @@
+#
+# MIT License
+#
+# Copyright (c) 2024 nbiotcloud
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+"""
+Unified Chip Design Platform - AMBA - AHB Drivers.
+"""
+
 from collections.abc import Iterable
 from enum import IntEnum
 
@@ -54,7 +82,7 @@ def _prep_addr_iter(addr: int, burst_length: int, size: SizeType, burst_type=Bur
         case BurstType.INCR:
             mask = -1
             len = burst_length
-        case other:  # SINGLE
+        case BurstType.SINGLE:
             mask = -1
             len = 1
     base = addr & ~mask
@@ -68,9 +96,8 @@ def _check_bus_acc(data_width: int, addr: int, offs: int, size: SizeType, burst_
         raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {data_width}!")
     if (addr & ((1 << size) - 1)) != 0:
         raise ValueError(f"Address {addr:x} is not aligned to size argument {size!r}!")
-    if (burst_type == BurstType.INCR16) or (burst_type == BurstType.INCR8) or (burst_type == BurstType.INCR4):
-        if offs != 0:
-            raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
+    if (burst_type in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4)) and (offs != 0):
+        raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
 
 
 class SlaveFsmState(IntEnum):
@@ -110,7 +137,6 @@ class AHBMasterDriver:
         burst_type: BurstType = BurstType.SINGLE,
     ) -> None:
         """AHB Write (Burst)."""
-
         base, offs, mask, burst_length = _prep_addr_iter(
             addr=addr, burst_length=burst_length, size=size, burst_type=burst_type
         )
@@ -194,6 +220,7 @@ class AHBMasterDriver:
         return tuple(rdata)
 
     async def reset(self):
+        """Reset AHB Master."""
         if self.hsel:
             self.hsel.value = 0
         self.hwrite.value = 0
@@ -235,6 +262,7 @@ class AHBSlaveDriver:
         hreadyout_delay=0,
         size_bytes=1024,
     ):
+        """AHB Slave Init."""
         self.clk = clk
         self.rst_an = rst_an
         self.haddr = haddr
@@ -264,6 +292,7 @@ class AHBSlaveDriver:
         self.curr_size = None
 
     def read(self, addr, size):
+        """AHB Read."""
         # number of bytes in this transfer according to transfer size
         byte_cnt = 2**size
         # extract the data from the bus
@@ -274,7 +303,8 @@ class AHBSlaveDriver:
         # datashift_byte = addr.integer & lower_addrmask
         # datashift_bit = (datashift_byte * 8) & shmsk
         datashift_bit = (addr.integer << 3) & shmsk
-        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask", hex(lower_datamask), "datashift_bit:", datashift_bit)
+        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask",
+        #     hex(lower_datamask), "datashift_bit:", datashift_bit)
 
         unaligned = alignmask & addr.integer
         if unaligned:
@@ -288,6 +318,7 @@ class AHBSlaveDriver:
         return rdata
 
     def write(self, addr, size, data):
+        """AHB Write."""
         # number of bytes in this transfer according to transfer size
         byte_cnt = 2**size
         shmsk = self.data_width - 1
@@ -300,7 +331,8 @@ class AHBSlaveDriver:
         datashift_bit = (addr.integer << 3) & shmsk
         unaligned = alignmask & addr.integer
 
-        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask", hex(lower_datamask), "datashift_bit:", datashift_bit)
+        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask",
+        #     hex(lower_datamask), "datashift_bit:", datashift_bit)
 
         if unaligned:
             raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
@@ -322,7 +354,7 @@ class AHBSlaveDriver:
 
         self.mem[masked_addr : masked_addr + byte_cnt] = bytes
         # print("RAM_LEN:", len(self.mem))
-        print("RAM:", ",".join(hex(x) for x in self.mem[masked_addr:masked_addr+byte_cnt]))
+        print("RAM:", ",".join(hex(x) for x in self.mem[masked_addr : masked_addr + byte_cnt]))
 
     # async def run(self):
     #     while True:
@@ -355,8 +387,9 @@ class AHBSlaveDriver:
     #                 self.hrdata.value = rdata  # 0x76543210
 
     async def run(self):
+        """Slave Main Loop."""
         self.hreadyout.value = 1
-        self.hrdata.value = 0xdeaddead  # BOZO: not visible in waves?!?
+        self.hrdata.value = 0xDEADDEAD  # BOZO: not visible in waves?!?
         while True:
             await RisingEdge(self.clk)
             # print("BOZO", self.state, self.htrans.value, self.haddr.value)
@@ -382,11 +415,13 @@ class AHBSlaveDriver:
                 rdata = self.read(self.curr_addr, self.curr_size)
                 self.hrdata.value = rdata
             else:
-                self.hrdata.value = 0xdeadbeef  # BOZOjust temp for debugging
+                self.hrdata.value = 0xDEADBEEF  # BOZOjust temp for debugging
             # print("BOZO2", self.state)
 
     def set_hreadyout_delay(self, delay):
+        """Set hreadyout Delay."""
         self.hreadyout_delay = delay
 
     def set_data(self, data):
+        """Preload Slave Memory."""
         self.mem = data
