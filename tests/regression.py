@@ -84,7 +84,7 @@ def test_generic(test):
         toplevel=top,
         module=test[0],
         python_search=[f"{prjroot}/tests/"],
-        extra_args=[] + ["-Wno-fatal"],
+        extra_args=["-Wno-fatal"],
         sim_build=sim_build,
         workdir=f"sim_run_{top}_{test}",
         timescale="1ns/1ps",
@@ -100,7 +100,7 @@ def test_generic(test):
             + test[2]
             + ["-xml-only", "--bbox-sys", "-top", top, "--xml-output", f"{sim_build}/{top}.xml"]
         )
-        subprocess.check_call(["xml2stems", f"{sim_build}/{top}.xml", f"{sim_build}/{top}.stems"])
+        subprocess.check_call(["/usr/bin/xml2stems", f"{sim_build}/{top}.xml", f"{sim_build}/{top}.stems"])
 
     if sim == "verilator" and gui:
         restore_path = Path(prjroot) / "tests" / f"{test[0]}.gtkw"
@@ -110,7 +110,7 @@ def test_generic(test):
             restore = ""
         subprocess.check_call(
             [
-                "gtkwave",
+                "/usr/bin/gtkwave",
                 "-t",
                 f"{sim_build}/{top}.stems",
                 "-f",
