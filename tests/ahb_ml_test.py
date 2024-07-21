@@ -105,12 +105,16 @@ async def ahb_ml_test(dut):
     rst_an.value = 1
     await wait_clocks(hclk, 10)
 
+    await dsp_mst.write(0xF0000100, 0xBEEFBEEF)
+    await wait_clocks(hclk, 5)
+
     ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
     dsp_wr = cocotb.start_soon(
         dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
     )
     await Combine(ext_wr, dsp_wr)
 
+    await wait_clocks(hclk, 5)
     rdata = await ext_mst.read(0xF0000000, burst_type=BurstType.INCR8, size=SizeType.BYTE)
     print("MST EXT rdata:", [hex(data) for data in rdata])
 

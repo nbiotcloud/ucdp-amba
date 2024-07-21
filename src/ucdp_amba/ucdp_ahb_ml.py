@@ -195,6 +195,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
                     continue
                 self.add_signal(subt.type_, f"mst_{master.name}_{subt.name}_s")
                 self.add_signal(subt.type_, f"mst_{master.name}_{subt.name}_r")
+            self.add_signal(t.AhbWriteType(), f"mst_{master.name}_hwrite_dph_r", comment="data-phase write indicator")
         for slave in self.slaves:
             slave_masters = self._slave_masters[slave.name]
             num_mst = len(slave_masters)

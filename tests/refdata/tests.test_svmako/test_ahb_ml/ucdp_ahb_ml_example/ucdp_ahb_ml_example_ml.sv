@@ -215,6 +215,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic [2:0]  mst_ext_hburst_r;     // AHB Burst Type
   logic [3:0]  mst_ext_hprot_s;      // AHB Transfer Protection
   logic [3:0]  mst_ext_hprot_r;      // AHB Transfer Protection
+  logic        mst_ext_hwrite_dph_r; // data-phase write indicator
   logic [2:0]  fsm_dsp_r;            // Master 'dsp' FSM
   logic        mst_dsp_new_xfer_s;
   logic        mst_dsp_cont_xfer_s;
@@ -240,6 +241,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic [2:0]  mst_dsp_hburst_r;     // AHB Burst Type
   logic [3:0]  mst_dsp_hprot_s;      // AHB Transfer Protection
   logic [3:0]  mst_dsp_hprot_r;      // AHB Transfer Protection
+  logic        mst_dsp_hwrite_dph_r; // data-phase write indicator
   logic        mst_ext_ram_req_s;
   logic        mst_ext_ram_keep_s;
   logic        slv_ram_ext_gnt_r;
@@ -290,7 +292,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     endcase
 
     mst_ext_ram_req_s  = (mst_ext_ram_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_ram_req_r;
-    mst_ext_ram_keep_s = mst_ext_ram_sel_s & mst_ext_cont_xfer_s;
+    mst_ext_ram_keep_s = mst_ext_ram_gnt_r & mst_ext_cont_xfer_s;
     mst_ext_misc_req_s = (mst_ext_misc_sel_s & mst_ext_new_xfer_s & mst_ext_rqstate_s) | mst_ext_misc_req_r;
 
     // Grant Combination
@@ -441,6 +443,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       mst_ext_hwrite_r <= ahb_mst_ext_hwrite_i;
       mst_ext_hprot_r  <= ahb_mst_ext_hprot_i;
     end
+
+    mst_ext_hwrite_dph_r <= mst_ext_hwrite_s;
   end
 
   // Master 'ext' Mux
@@ -487,13 +491,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       fsm_error0_st, fsm_transfer_st: begin
         case ({mst_ext_ram_gnt_r, mst_ext_misc_gnt_r})
           2'b01: begin
-            ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
+            ahb_mst_ext_hrdata_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_misc_hrdata_i : 32'h00000000;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
           end
 
           2'b10: begin
-            ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
+            ahb_mst_ext_hrdata_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hrdata_i : 32'h00000000;
             ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
           end
@@ -566,7 +570,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     endcase
 
     mst_dsp_ram_req_s    = (mst_dsp_ram_sel_s & mst_dsp_new_xfer_s & mst_dsp_rqstate_s) | mst_dsp_ram_req_r;
-    mst_dsp_ram_keep_s   = mst_dsp_ram_sel_s & mst_dsp_cont_xfer_s;
+    mst_dsp_ram_keep_s   = mst_dsp_ram_gnt_r & mst_dsp_cont_xfer_s;
     mst_dsp_periph_req_s = (mst_dsp_periph_sel_s & mst_dsp_new_xfer_s & mst_dsp_rqstate_s) | mst_dsp_periph_req_r;
 
     // Grant Combination
@@ -717,6 +721,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       mst_dsp_hwrite_r <= ahb_mst_dsp_hwrite_i;
       mst_dsp_hprot_r  <= ahb_mst_dsp_hprot_i;
     end
+
+    mst_dsp_hwrite_dph_r <= mst_dsp_hwrite_s;
   end
 
   // Master 'dsp' Mux
@@ -763,13 +769,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       fsm_error0_st, fsm_transfer_st: begin
         case ({mst_dsp_ram_gnt_r, mst_dsp_periph_gnt_r})
           2'b01: begin
-            ahb_mst_dsp_hrdata_o = ahb_slv_periph_hrdata_i;
+            ahb_mst_dsp_hrdata_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_periph_hrdata_i : 32'h00000000;
             ahb_mst_dsp_hready_o = ahb_slv_periph_hreadyout_i;
             ahb_mst_dsp_hresp_o = ahb_slv_periph_hresp_i;
           end
 
           2'b10: begin
-            ahb_mst_dsp_hrdata_o = ahb_slv_ram_hrdata_i;
+            ahb_mst_dsp_hrdata_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hrdata_i : 32'h00000000;
             ahb_mst_dsp_hready_o = ahb_slv_ram_hreadyout_i;
             ahb_mst_dsp_hresp_o = ahb_slv_ram_hresp_i;
           end

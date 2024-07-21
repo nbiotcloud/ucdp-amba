@@ -93,7 +93,7 @@ ${parent.logic(indent=indent, skip=skip)}
   for slavename in master_slaves:
     reqkeep.add_row(f"mst_{master.name}_{slavename}_req_s", "=", f"(mst_{master.name}_{slavename}_sel_s & mst_{master.name}_new_xfer_s & mst_{master.name}_rqstate_s) | mst_{master.name}_{slavename}_req_r;")
     if len(mod._slave_masters[slavename]) > 1:
-      reqkeep.add_row(f"mst_{master.name}_{slavename}_keep_s", "=", f"mst_{master.name}_{slavename}_sel_s & mst_{master.name}_cont_xfer_s;")
+      reqkeep.add_row(f"mst_{master.name}_{slavename}_keep_s", "=", f"mst_{master.name}_{slavename}_gnt_r & mst_{master.name}_cont_xfer_s;")
   mst_dec_slice = dec_slices[master.name]
 %>\
   // Master '${master.name}' Logic
@@ -294,6 +294,8 @@ ${reqkeep.get()}
       mst_${master.name}_hauser_r <= ${ff_dly}ahb_mst_${master.name}_hauser_i;
 %   endif
     end
+
+    mst_${master.name}_hwrite_dph_r <= ${ff_dly}mst_${master.name}_hwrite_s;
   end
 
 <%
@@ -359,14 +361,14 @@ ${reqkeep.get()}
 
       fsm_error0_st, fsm_transfer_st: begin
 %   if num_slaves == 1:
-        ahb_mst_${master.name}_hrdata_o = ahb_slv_${sole_slv}_hrdata_i;
+        ahb_mst_${master.name}_hrdata_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${sole_slv}_hrdata_i : ${rslvr._get_uint_value(0, mod.datawidth)};
         ahb_mst_${master.name}_hready_o = ahb_slv_${sole_slv}_hreadyout_i;
         ahb_mst_${master.name}_hresp_o = ahb_slv_${sole_slv}_hresp_i;
 %   else:
         case ({${mux_cond}})
 %     for idx, slave in enumerate(reversed(master_slaves)):
           ${num_slaves}'b${f"{1<<idx:0{num_slaves}b}"}: begin
-            ahb_mst_${master.name}_hrdata_o = ahb_slv_${slave}_hrdata_i;
+            ahb_mst_${master.name}_hrdata_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${slave}_hrdata_i : ${rslvr._get_uint_value(0, mod.datawidth)};
             ahb_mst_${master.name}_hready_o = ahb_slv_${slave}_hreadyout_i;
             ahb_mst_${master.name}_hresp_o = ahb_slv_${slave}_hresp_i;
           end
