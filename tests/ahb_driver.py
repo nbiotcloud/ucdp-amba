@@ -356,47 +356,17 @@ class AHBSlaveDriver:
         # print("RAM_LEN:", len(self.mem))
         print("RAM:", ",".join(hex(x) for x in self.mem[masked_addr : masked_addr + byte_cnt]))
 
-    # async def run(self):
-    #     while True:
-    #         self.hreadyout.value = 1
-    #         # self.hrdata.value = 0
-    #         if not self.state:
-    #             await RisingEdge(self.clk)
-    #         # Check if there's an AHB request
-    #         if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
-    #             self.curr_addr = self.haddr.value
-    #             self.curr_write = self.hwrite.value
-    #             self.curr_size = self.hsize.value
-    #             for _ in range(self.hreadyout_delay):  # delay the answer if configured
-    #                 await RisingEdge(self.clk)
-    #                 self.hreadyout.value = 0
-    #             self.hreadyout.value = 1
-    #             await RisingEdge(self.clk)
-    #             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
-    #                 self.state = 1
-    #             else:
-    #                 self.state = 0
-    #             self.curr_wdata = self.hwdata.value if self.curr_write else 0
-    #             if self.curr_write:
-    #                 # Handle write request
-    #                 self.write(self.curr_addr, self.curr_size, self.curr_wdata)
-    #             else:
-    #                 # Handle read request
-    #                 rdata = self.read(self.curr_addr, self.curr_size)
-    #                 print("BOZO", hex(rdata))
-    #                 self.hrdata.value = rdata  # 0x76543210
-
     async def run(self):
         """Slave Main Loop."""
         self.hreadyout.value = 1
-        self.hrdata.value = 0xDEADDEAD  # BOZO: not visible in waves?!?
+        self.hrdata.value = 0xDEADDEAD
         while True:
             await RisingEdge(self.clk)
             # print("BOZO", self.state, self.htrans.value, self.haddr.value)
             if self.state:
-                # for _ in range(self.hreadyout_delay):  # delay the answer if configured
-                #     await RisingEdge(self.clk)
-                #     self.hreadyout.value = 0
+                for _ in range(self.hreadyout_delay):  # delay the answer if configured
+                    await RisingEdge(self.clk)
+                    self.hreadyout.value = 0
                 self.hreadyout.value = 1
                 self.curr_wdata = self.hwdata.value if self.curr_write else 0
                 if self.curr_write:
