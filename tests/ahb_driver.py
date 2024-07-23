@@ -28,7 +28,9 @@ Unified Chip Design Platform - AMBA - AHB Drivers.
 
 from collections.abc import Iterable
 from enum import IntEnum
+from logging import getLogger
 
+from cocotb.handle import SimHandle
 from cocotb.triggers import RisingEdge
 
 
@@ -93,11 +95,11 @@ def _prep_addr_iter(addr: int, burst_length: int, size: SizeType, burst_type=Bur
 def _check_bus_acc(data_width: int, addr: int, offs: int, size: SizeType, burst_type=BurstType) -> None:
     """Check AHB Bus Access."""
     if data_width < (8 << size):
-        raise ValueError(f"Size argument {size!r} -> {8<<size} too big for data width of {data_width}!")
+        assert False, f"Size argument {size!r} -> {8<<size} too big for data width of {data_width}!"
     if (addr & ((1 << size) - 1)) != 0:
-        raise ValueError(f"Address {addr:x} is not aligned to size argument {size!r}!")
+        assert False, f"Address {addr:x} is not aligned to size argument {size!r}!"
     if (burst_type in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4)) and (offs != 0):
-        raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
+        assert False, f"Address {addr:x} is not aligned to BurstType {burst_type!r}!"
 
 
 class SlaveFsmState(IntEnum):
@@ -111,8 +113,24 @@ class AHBMasterDriver:
     """AHB Master bus driver."""
 
     def __init__(
-        self, clk, rst_an, haddr, hwrite, hwdata, htrans, hburst, hsize, hprot, hrdata, hready, hresp, hsel=None
+        self,
+        name: str,
+        clk: SimHandle,
+        rst_an: SimHandle,
+        haddr: SimHandle,
+        hwrite: SimHandle,
+        hwdata: SimHandle,
+        htrans: SimHandle,
+        hburst: SimHandle,
+        hsize: SimHandle,
+        hprot: SimHandle,
+        hrdata: SimHandle,
+        hready: SimHandle,
+        hresp: SimHandle,
+        hsel: SimHandle = None,
+        log_level: int = None,
     ):
+        self.name = name
         self.clk = clk
         self.rst_an = rst_an
         self.haddr = haddr
@@ -127,6 +145,10 @@ class AHBMasterDriver:
         self.hresp = hresp
         self.hsel = hsel  # allowed to be None as it might not be present (e.g. Multilayer input)
         self.data_width = len(hwdata)
+
+        self.logger = getLogger(name)
+        if log_level is not None:  # important explicit check for None as 0 would be a valid value
+            self.logger.setLevel(log_level)
 
     async def write(
         self,
@@ -227,17 +249,7 @@ class AHBMasterDriver:
         self.hwdata.value = 0
         self.htrans.value = 0  # IDLE
         self.hburst.value = 0
-        await RisingEdge(self.clk)
-        if self.hsel:
-            self.hsel.value = 1
-        self.hwrite.value = 1
-        self.hwdata.value = 0
-        self.htrans.value = 2  # NONSEQ
-        self.hburst.value = 0
-        await RisingEdge(self.clk)
-        if self.hsel:
-            self.hsel.value = 0
-        self.htrans.value = 0  # IDLE
+        self.hprot.value = 0
 
 
 class AHBSlaveDriver:
@@ -245,24 +257,27 @@ class AHBSlaveDriver:
 
     def __init__(
         self,
-        clk,
-        rst_an,
-        haddr,
-        hwrite,
-        hwdata,
-        htrans,
-        hburst,
-        hsize,
-        hrdata,
-        hready,
-        hreadyout,
-        hresp,
-        hsel,
-        hprot=None,
-        hreadyout_delay=0,
-        size_bytes=1024,
+        name: str,
+        clk: SimHandle,
+        rst_an: SimHandle,
+        haddr: SimHandle,
+        hwrite: SimHandle,
+        hwdata: SimHandle,
+        htrans: SimHandle,
+        hburst: SimHandle,
+        hsize: SimHandle,
+        hrdata: SimHandle,
+        hready: SimHandle,
+        hreadyout: SimHandle,
+        hresp: SimHandle,
+        hsel: SimHandle,
+        hprot: SimHandle = None,
+        hreadyout_delay: int = 0,
+        size_bytes: int = 1024,
+        log_level: int = None,
     ):
         """AHB Slave Init."""
+        self.name = name
         self.clk = clk
         self.rst_an = rst_an
         self.haddr = haddr
@@ -276,8 +291,12 @@ class AHBSlaveDriver:
         self.hreadyout = hreadyout
         self.hresp = hresp
         self.hsel = hsel
-        self.hprot = hprot  # allowed to be None as it might not be present (e.g. Multilayer input)
+        self.hprot = hprot  # allowed to be None as it might not be present/unsupported by a slave
         self.data_width = len(hwdata)
+
+        self.logger = getLogger(name)
+        if log_level is not None:  # important explicit check for None as 0 would be a valid value
+            self.logger.setLevel(log_level)
 
         self.mem = bytearray(size_bytes)  # Initialize a 1KB memory
         self.hreadyout_delay = hreadyout_delay  # Delay for HREADYOUT signal to simulate longer access times
@@ -297,24 +316,23 @@ class AHBSlaveDriver:
         byte_cnt = 2**size
         # extract the data from the bus
         alignmask = byte_cnt - 1
-        # lower_addrmask = (byte_cnt * 2) - 1
-        # lower_datamask = (byte_cnt * 8) - 1
         shmsk = self.data_width - 1
-        # datashift_byte = addr.integer & lower_addrmask
-        # datashift_bit = (datashift_byte * 8) & shmsk
         datashift_bit = (addr.integer << 3) & shmsk
-        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask",
-        #     hex(lower_datamask), "datashift_bit:", datashift_bit)
+
+        self.logger.debug(
+            f"=READ TRANSFER= alignment mask: {hex(alignmask)} shift mask: {hex(shmsk)} datashift in bits: {hex(datashift_bit)}"
+        )
 
         unaligned = alignmask & addr.integer
-        if unaligned:
-            raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
+        assert not unaligned, f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}."
 
         masked_addr = self.addrmask & addr.integer
-
         rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt]) << datashift_bit
 
-        print("READ TRANSFER DATA:", hex(rdata), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
+        self.logger.info(
+            f"=READ TRANSFER= data: {hex(rdata)} address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
+        )
+
         return rdata
 
     def write(self, addr, size, data):
@@ -330,31 +348,21 @@ class AHBSlaveDriver:
         # datashift_bit = datashift_byte * 8
         datashift_bit = (addr.integer << 3) & shmsk
         unaligned = alignmask & addr.integer
+        assert not unaligned, f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}."
 
-        # print("DEBUG alignmask:", hex(alignmask), "lower_addrmask: ", hex(lower_addrmask), "lower_datamask",
-        #     hex(lower_datamask), "datashift_bit:", datashift_bit)
+        self.logger.debug(
+            f"=WRITE TRANSFER= alignment mask: {hex(alignmask)} shift mask: {hex(shmsk)} lower data mask {hex(lower_datamask)} datashift in bits: {hex(datashift_bit)}"
+        )
 
-        if unaligned:
-            raise ValueError(f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}.")
-        # TODO confirm alignment
         wdata = (data.integer >> datashift_bit) & lower_datamask
-
         masked_addr = self.addrmask & addr.integer
         bytes = int.to_bytes(wdata, byte_cnt, "little")
-        print(
-            "WRITE TRANSFER DATA:",
-            hex(wdata),
-            "BYTES:",
-            ",".join([hex(x) for x in bytes]),
-            "ADDR:",
-            hex(masked_addr),
-            "SIZE_BYTES:",
-            byte_cnt,
+
+        self.logger.info(
+            f"=WRITE TRANSFER= data: {hex(wdata)} data (bytes): {",".join([hex(x) for x in bytes])} address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
         )
 
         self.mem[masked_addr : masked_addr + byte_cnt] = bytes
-        # print("RAM_LEN:", len(self.mem))
-        print("RAM:", ",".join(hex(x) for x in self.mem[masked_addr : masked_addr + byte_cnt]))
 
     async def run(self):
         """Slave Main Loop."""
@@ -395,3 +403,18 @@ class AHBSlaveDriver:
     def set_data(self, data):
         """Preload Slave Memory."""
         self.mem = data
+
+    def log_data(self, start_addr=0, end_addr=None, chunk_size=16):
+        """Request logging of Slave Memory content."""
+        if end_addr is None:
+            end_addr = len(self.mem) - 1
+        elif end_addr > len(self.mem) - 1:
+            self.logger.error(
+                f"=MEMORY CONTENTS= Provided end_addr {hex(end_addr)} to log_data is beyond size of slave memory."
+            )
+            return
+        for i in range(start_addr, end_addr + 1, chunk_size):
+            numlen = len(f"{end_addr:X}")
+            self.logger.info(
+                f"=MEMORY CONTENTS= 0x{i:0{numlen}X}-0x{i+chunk_size-1:0{numlen}X} [{','.join(f"0x{x:02X}" for x in self.mem[i : min(i + chunk_size, end_addr+1)])}]"
+            )
