@@ -163,7 +163,11 @@ ignore = [
     # Ignore false-positive subprocess check (https://github.com/astral-sh/ruff/issues/4045)
     'S603',
     # We only use user-space code
-    'S607'
+    'S607',
+    # Intentionally using f-strings in logging for better code readability
+    'G004',
+    # we are not working on cryptographic applications
+    'S311',
 ]
 [tool.ruff.lint.per-file-ignores]
 "test_*" = [
