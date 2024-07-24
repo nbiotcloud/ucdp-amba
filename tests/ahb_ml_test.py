@@ -65,6 +65,9 @@ async def wait_clocks(clock, cycles):
 @cocotb.test()
 async def ahb_ml_test(dut):
     """Main Test Loop."""
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.INFO)
+
     hclk = dut.main_clk_i
     rst_an = dut.main_rst_an_i
 
@@ -175,22 +178,25 @@ async def ahb_ml_test(dut):
             offs &= ~mmask  # make it burst aligned
         smax = (1 << (1 << (size+3))) - 1  # max value according to size
         memimg = bytearray(blen << size)
-        print("BOZO2", blen, size, hex(offs), hex(imask))
+        # print("BOZO2", blen, size, hex(offs), hex(imask))
         if random.randint(0, 1):
             wdata = [random.randint(1, smax) for i in range(blen)]
             for i in range(blen << size):
-                memimg[(offs+i) & imask] = _calc_wbytes(size, wdata)[i] # BOZO single alfword!!!
+                memimg[(offs+i) & imask] = _calc_wbytes(size, wdata)[i]
 
             mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)] = memimg
-            print("BOZO-W", size, hex(offs), hex(offs & ~mmask), [hex(w) for w in wdata],
-                  "\n", [hex(w) for w in _calc_wbytes(size, wdata)],
-                  "\n", [hex(w) for w in memimg],
-                  "\n", [hex(b) for b in mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)]])
+            log.info(f"=MST WRITE TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name}; , wdata:{[hex(w) for w in wdata]}")
+            # print("BOZO-W", size, hex(offs), hex(offs & ~mmask), [hex(w) for w in wdata],
+            #       "\n", [hex(w) for w in _calc_wbytes(size, wdata)],
+            #       "\n", [hex(w) for w in memimg],
+            #       "\n", [hex(b) for b in mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)]])
             await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
         else:
             rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            
             for i in range(blen << size):
                 memimg[(offs+i) & imask] = _calc_rbytes(size, rdata)[i]
+
             cmp = (mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)] == memimg)
             print("BOZO-R", size, hex(offs), hex(offs & ~mmask), [hex(r) for r in rdata],
                   "\n", [hex(b) for b in _calc_rbytes(size, rdata)],
