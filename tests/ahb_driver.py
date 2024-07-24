@@ -97,7 +97,7 @@ def _check_bus_acc(data_width: int, addr: int, offs: int, size: SizeType, burst_
     if (addr & ((1 << size) - 1)) != 0:
         raise ValueError(f"Address {addr:x} is not aligned to size argument {size!r}!")
     if (burst_type in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4)) and (offs != 0):
-        raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r}!")
+        raise ValueError(f"Address {addr:x} is not aligned to BurstType {burst_type!r} at size {size!r}!")
 
 
 class SlaveFsmState(IntEnum):
@@ -148,7 +148,7 @@ class AHBMasterDriver:
             data = iter(data)
         shmsk = self.data_width - 1
         self.haddr.value = base + offs
-        self.hwdata.value = 0
+        self.hwdata.value = 0xdeaddead
         self.hwrite.value = 1
         if self.hsel:
             self.hsel.value = 1
@@ -175,7 +175,7 @@ class AHBMasterDriver:
         await RisingEdge(self.clk)
         while self.hready == 0:
             await RisingEdge(self.clk)
-        self.hwdata.value = 0
+        self.hwdata.value = 0xdeaddead
 
     async def read(
         self, addr: int, burst_length: int = 1, size: SizeType = SizeType.WORD, burst_type: BurstType = BurstType.SINGLE
@@ -312,7 +312,7 @@ class AHBSlaveDriver:
 
         masked_addr = self.addrmask & addr.integer
 
-        rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt]) << datashift_bit
+        rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt], "little") << datashift_bit
 
         print("READ TRANSFER DATA:", hex(rdata), "ADDR:", hex(masked_addr), "SIZE_BYTES:", byte_cnt)
         return rdata
