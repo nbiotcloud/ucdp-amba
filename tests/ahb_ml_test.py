@@ -27,11 +27,31 @@ Unified Chip Design Platform - AMBA - AHB Tests.
 """
 
 import cocotb
+import random
 from cocotb.clock import Clock
 from cocotb.triggers import Combine, RisingEdge
+from typing import List
 
 from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 
+
+def _calc_wbytes(size:SizeType, wdata:List[int]) -> List[int]:
+    """Calculate Reference Write Data in Bytes."""
+    wbytes = []
+    for wd in wdata:
+        for _ in range(1 << size):
+            wbytes.append(wd & 0xFF)
+            wd = wd >> 8
+    return wbytes
+
+def _calc_rbytes(size:SizeType, rdata:List[int]) -> List[int]:
+    """Calculate Read Data in Bytes."""
+    rbytes = []
+    for rd in rdata:
+        for _ in range(1<< size):
+            rbytes.append(rd & 0xFF)
+            rd = rd >> 8
+    return rbytes
 
 # TODO put this is a generic tb lib
 async def wait_clocks(clock, cycles):
@@ -105,17 +125,70 @@ async def ahb_ml_test(dut):
     rst_an.value = 1
     await wait_clocks(hclk, 10)
 
-    await dsp_mst.write(0xF0000100, 0xBEEFBEEF)
-    await wait_clocks(hclk, 5)
+    # await dsp_mst.write(0xF0000100, 0xBEEFBEEF)
+    # await wait_clocks(hclk, 5)
 
-    ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
-    dsp_wr = cocotb.start_soon(
-        dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
-    )
-    await Combine(ext_wr, dsp_wr)
+    # ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
+    # dsp_wr = cocotb.start_soon(
+    #     dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
+    # )
+    # await Combine(ext_wr, dsp_wr)
+    # await wait_clocks(hclk, 5)
 
-    await wait_clocks(hclk, 5)
-    rdata = await ext_mst.read(0xF0000000, burst_type=BurstType.INCR8, size=SizeType.BYTE)
-    print("MST EXT rdata:", [hex(data) for data in rdata])
+
+    # ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
+    # dsp_wr = cocotb.start_soon(
+    #     dsp_mst.write(0xF0000016, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
+    # )
+    # await Combine(ext_wr, dsp_wr)
+
+    # await wait_clocks(hclk, 5)
+    # rdata = await ext_mst.read(0xF0000000, burst_type=BurstType.INCR8, size=SizeType.BYTE)
+    # print("MST EXT rdata:", [hex(data) for data in rdata])
+    # await wait_clocks(hclk, 5)
+
+    mem = bytearray(1024)
+    btypes = (BurstType.SINGLE, BurstType.WRAP4, BurstType.INCR4, BurstType.WRAP8, BurstType.INCR8, BurstType.WRAP16, BurstType.INCR16)
+    sizes = (SizeType.BYTE, SizeType.HALFWORD, SizeType.WORD)
+    for w in range(20):
+        btype = random.choice(btypes)
+        size = random.choice(sizes)
+        if btype == BurstType.SINGLE:
+            blen = 1
+            imask = (1 << size) -1
+            mmask = 1
+        else:
+            blen = 2 << (btype >> 1)
+            mmask = imask = (4 << (((btype - 2) >> 1) + size)) - 1
+        offs = random.randint(0, 1023) & ~((1 << size) - 1)  # make it size aligned
+
+        if (btype in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4)):
+            offs &= ~mmask  # make it burst aligned
+        smax = (1 << (1 << (size+3))) - 1  # max value according to size
+        memimg = bytearray(blen << size)
+        print("BOZO2", blen, size, hex(offs), hex(imask))
+        if random.randint(0, 1):
+            wdata = [random.randint(1, smax) for i in range(blen)]
+            for i in range(blen << size):
+                memimg[(offs+i) & imask] = _calc_wbytes(size, wdata)[i] # BOZO single alfword!!!
+
+            mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)] = memimg
+            print("BOZO-W", size, hex(offs), hex(offs & ~mmask), [hex(w) for w in wdata],
+                  "\n", [hex(w) for w in _calc_wbytes(size, wdata)],
+                  "\n", [hex(w) for w in memimg],
+                  "\n", [hex(b) for b in mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)]])
+            await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
+        else:
+            rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            for i in range(blen << size):
+                memimg[(offs+i) & imask] = _calc_rbytes(size, rdata)[i]
+            cmp = (mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)] == memimg)
+            print("BOZO-R", size, hex(offs), hex(offs & ~mmask), [hex(r) for r in rdata],
+                  "\n", [hex(b) for b in _calc_rbytes(size, rdata)],
+                  "\n", [hex(b) for b in memimg],
+                  "\n", [hex(b) for b in mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)]])
+            if not cmp:
+                raise ValueError("Compare mismatch")
+        await wait_clocks(hclk, 2)
 
     await wait_clocks(hclk, 30)
