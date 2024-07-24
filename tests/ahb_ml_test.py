@@ -26,6 +26,8 @@
 Unified Chip Design Platform - AMBA - AHB Tests.
 """
 
+import logging
+
 import cocotb
 import random
 from cocotb.clock import Clock
@@ -67,6 +69,8 @@ async def ahb_ml_test(dut):
     rst_an = dut.main_rst_an_i
 
     ext_mst = AHBMasterDriver(
+        name="ext_mst",
+        log_level=logging.INFO,
         clk=hclk,
         rst_an=rst_an,
         haddr=dut.ahb_mst_ext_haddr_i,
@@ -83,6 +87,8 @@ async def ahb_ml_test(dut):
     )
 
     dsp_mst = AHBMasterDriver(
+        name="dsp_mst",
+        log_level=logging.INFO,
         clk=hclk,
         rst_an=rst_an,
         haddr=dut.ahb_mst_dsp_haddr_i,
@@ -99,6 +105,8 @@ async def ahb_ml_test(dut):
     )
 
     ram_slv = AHBSlaveDriver(
+        name="ram_slv",
+        log_level=logging.INFO,
         clk=hclk,
         rst_an=rst_an,
         hsel=dut.ahb_slv_ram_hsel_o,
@@ -134,6 +142,7 @@ async def ahb_ml_test(dut):
     # )
     # await Combine(ext_wr, dsp_wr)
     # await wait_clocks(hclk, 5)
+    # ram_slv.log_data()
 
 
     # ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
