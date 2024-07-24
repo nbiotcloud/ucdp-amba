@@ -165,8 +165,10 @@ class AHBMasterDriver:
         _check_bus_acc(data_width=self.data_width, addr=addr, offs=offs, size=size, burst_type=burst_type)
 
         if isinstance(data, int):
+            log_data = (data,)
             data = iter((data,))
         else:
+            log_data = tuple(data)
             data = iter(data)
         shmsk = self.data_width - 1
         self.haddr.value = base + offs
@@ -198,6 +200,9 @@ class AHBMasterDriver:
         while self.hready == 0:
             await RisingEdge(self.clk)
         self.hwdata.value = 0
+        self.logger.info(
+            f"=MST WRITE= data: [{','.join(f"0x{x:0{(2**size) * 2}X}" for x in log_data)}] address: {hex(addr)} burst: {burst_type.name} burst length: {burst_length}  size: {size.name}"
+        )
 
     async def read(
         self, addr: int, burst_length: int = 1, size: SizeType = SizeType.WORD, burst_type: BurstType = BurstType.SINGLE
@@ -239,6 +244,9 @@ class AHBMasterDriver:
         while self.hready == 0:
             await RisingEdge(self.clk)
         rdata.append((self.hrdata.value.integer >> ((poffs << 3) & shmsk)) & szmsk)
+        self.logger.info(
+            f"=MST READ= data: [{','.join(f"0x{x:0{self.data_width // 4}X}" for x in rdata)}] address: {hex(addr)} burst: {burst_type.name} burst length: {burst_length}  size: {size.name}"
+        )
         return tuple(rdata)
 
     async def reset(self):
@@ -320,7 +328,7 @@ class AHBSlaveDriver:
         datashift_bit = (addr.integer << 3) & shmsk
 
         self.logger.debug(
-            f"=READ TRANSFER= alignment mask: {hex(alignmask)} shift mask: {hex(shmsk)} datashift in bits: {hex(datashift_bit)}"
+            f"=SLV READ= alignment mask: {hex(alignmask)} shift mask: {hex(shmsk)} datashift in bits: {hex(datashift_bit)}"
         )
 
         unaligned = alignmask & addr.integer
@@ -330,7 +338,7 @@ class AHBSlaveDriver:
         rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt]) << datashift_bit
 
         self.logger.info(
-            f"=READ TRANSFER= data: {hex(rdata)} address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
+            f"=SLV READ= data: {hex(rdata)} address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
         )
 
         return rdata
@@ -351,7 +359,7 @@ class AHBSlaveDriver:
         assert not unaligned, f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}."
 
         self.logger.debug(
-            f"=WRITE TRANSFER= alignment mask: {hex(alignmask)} shift mask: {hex(shmsk)} lower data mask {hex(lower_datamask)} datashift in bits: {hex(datashift_bit)}"
+            f"=SLV WRITE= alignment mask: {hex(alignmask)} shift mask: {hex(shmsk)} lower data mask {hex(lower_datamask)} datashift in bits: {hex(datashift_bit)}"
         )
 
         wdata = (data.integer >> datashift_bit) & lower_datamask
@@ -359,7 +367,7 @@ class AHBSlaveDriver:
         bytes = int.to_bytes(wdata, byte_cnt, "little")
 
         self.logger.info(
-            f"=WRITE TRANSFER= data: {hex(wdata)} data (bytes): {",".join([hex(x) for x in bytes])} address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
+            f"=SLV WRITE= data: {hex(wdata)} data (bytes): {",".join([hex(x) for x in bytes])} address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
         )
 
         self.mem[masked_addr : masked_addr + byte_cnt] = bytes
