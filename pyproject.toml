@@ -168,6 +168,8 @@ ignore = [
     'G004',
     # we are not working on cryptographic applications
     'S311',
+    # standard code limit of 50 statements seems awfully low
+    'PLR0915'
 ]
 [tool.ruff.lint.per-file-ignores]
 "test_*" = [

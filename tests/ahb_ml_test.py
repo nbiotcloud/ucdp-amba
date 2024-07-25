@@ -36,26 +36,24 @@ from cocotb.triggers import Combine, RisingEdge
 from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 
 
-def _calc_wbytes(size: SizeType, wdata: list[int]) -> list[int]:
+def _calc_wrmem(offs: int, size: SizeType, blen: int, mmask: int, wdata: list[int]) -> bytearray:
     """Calculate Reference Write Data in Bytes."""
-    wbytes = []
-    for wd in wdata:
-        w = wd
-        for _ in range(1 << size):
-            wbytes.append(w & 0xFF)
-            w = w >> 8
-    return wbytes
+    memimg = bytearray(blen << size)
+    for widx in range(blen):
+        midx = (offs + (widx << size)) & mmask
+        memimg[midx : (midx + (1 << size))] = int.to_bytes(wdata[widx], 1 << size, "little")
+    return memimg
 
 
-def _calc_rbytes(size: SizeType, rdata: list[int]) -> list[int]:
-    """Calculate Read Data in Bytes."""
-    rbytes = []
-    for rd in rdata:
-        r = rd
-        for _ in range(1 << size):
-            rbytes.append(r & 0xFF)
-            r = r >> 8
-    return rbytes
+def _calc_expected(offs: int, size: SizeType, blen: int, mmask: int, mem: bytearray) -> list[int]:
+    """Calculate Expected Read Data."""
+    xdata = []
+    for widx in range(blen):
+        xd = 0
+        for bidx in range(1 << size):
+            xd |= mem[(offs & ~mmask) + ((offs + (widx << size) + bidx) & mmask)] << (bidx << 3)
+        xdata.append(xd)
+    return xdata
 
 
 # TODO put this is a generic tb lib
@@ -139,8 +137,8 @@ async def ahb_ml_test(dut):
     rst_an.value = 1
     await wait_clocks(hclk, 10)
 
-    # await dsp_mst.write(0xF0000100, 0xBEEFBEEF)
-    # await wait_clocks(hclk, 5)
+    await dsp_mst.write(0xF0000300, 0xBEEFBEEF)
+    await wait_clocks(hclk, 5)
 
     ext_wr = cocotb.start_soon(ext_mst.write(0xF0000300, 0x76543210))
     dsp_wr = cocotb.start_soon(
@@ -148,7 +146,7 @@ async def ahb_ml_test(dut):
     )
     await Combine(ext_wr, dsp_wr)
     await wait_clocks(hclk, 5)
-    # ram_slv.log_data()
+    ram_slv.log_data()
 
     # ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
     # dsp_wr = cocotb.start_soon(
@@ -172,60 +170,47 @@ async def ahb_ml_test(dut):
         BurstType.INCR16,
     )
     sizes = (SizeType.BYTE, SizeType.HALFWORD, SizeType.WORD)
-    for w in range(20):
+    for _ in range(20):
         btype = random.choice(btypes)
         size = random.choice(sizes)
         if btype == BurstType.SINGLE:
             blen = 1
-            imask = (1 << size) - 1
-            mmask = 1
+            mmask = (1 << size) - 1
         else:
             blen = 2 << (btype >> 1)
-            mmask = imask = (4 << (((btype - 2) >> 1) + size)) - 1
+            mmask = (4 << (((btype - 2) >> 1) + size)) - 1
         offs = random.randint(0, 511) & ~((1 << size) - 1)  # make it size aligned
 
         if btype in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4):
             offs &= ~mmask  # make it burst aligned
         smax = (1 << (1 << (size + 3))) - 1  # max value according to size
-        memimg = bytearray(blen << size)
-        # print("BOZO2", blen, size, hex(offs), hex(imask))
         if random.randint(0, 1):
             wdata = [random.randint(1, smax) for i in range(blen)]
-            for i in range(blen << size):
-                memimg[(offs + i) & imask] = _calc_wbytes(size, wdata)[i]
 
-            mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = memimg
+            mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = _calc_wrmem(
+                offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata
+            )
             log.info(
                 f"=MST WRITE TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name}; "
                 f"wdata:{[hex(w) for w in wdata]}"
             )
-            # print("BOZO-W", size, hex(offs), hex(offs & ~mmask), [hex(w) for w in wdata],
-            #       "\n", [hex(w) for w in _calc_wbytes(size, wdata)],
-            #       "\n", [hex(w) for w in memimg],
-            #       "\n", [hex(b) for b in mem[(offs & ~mmask):(offs & ~mmask)+(blen << size)]])
             await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
         else:
+            xdata = _calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
             rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            if tuple(rdata) == tuple(xdata):
+                log.info(
+                    f"=MST READ TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name};\n"
+                    f"> rdata: {[hex(w) for w in rdata]};"
+                )
+            else:
+                log.error(
+                    f"=MST READ TRANSFER MISMATCH= offs:{hex(offs)}; burst:{btype.name}; size:{size.name};\n"
+                    f"> expected: {[hex(w) for w in xdata]};\n"
+                    f"> got:      {[hex(w) for w in rdata]};"
+                )
+                raise AssertionError("Read data compare mismatch.")
 
-            for i in range(blen << size):
-                memimg[(offs + i) & imask] = _calc_rbytes(size, rdata)[i]
-
-            cmp = mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] == memimg
-            print(
-                "BOZO-R",
-                size,
-                hex(offs),
-                hex(offs & ~mmask),
-                [hex(r) for r in rdata],
-                "\n",
-                [hex(b) for b in _calc_rbytes(size, rdata)],
-                "\n",
-                [hex(b) for b in memimg],
-                "\n",
-                [hex(b) for b in mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)]],
-            )
-            if not cmp:
-                raise ValueError("Compare mismatch")
         await wait_clocks(hclk, 2)
 
     await wait_clocks(hclk, 30)
