@@ -54,7 +54,7 @@ apb2mem_fl = [
 ]
 
 ahb2apb_fl = [
-    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_exsample/ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse.sv",
+    f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse.sv",
     f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue.sv",
     f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse.sv",
     f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue.sv",
