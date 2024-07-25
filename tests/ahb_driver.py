@@ -246,7 +246,7 @@ class AHBMasterDriver:
             await RisingEdge(self.clk)
         rdata.append((self.hrdata.value.integer >> ((poffs << 3) & shmsk)) & szmsk)
         self.logger.info(
-            f"=MST READ= data: [{','.join(f"0x{x:0{self.data_width // 4}X}" for x in rdata)}] "
+            f"=MST READ= data: [{','.join(f'0x{x:0{self.data_width // 4}X}' for x in rdata)}] "
             f"address: {hex(addr)} burst: {burst_type.name} burst length: {burst_length}  size: {size.name}"
         )
         return tuple(rdata)
