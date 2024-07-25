@@ -431,5 +431,5 @@ class AHBSlaveDriver:
             numlen = len(f"{end_addr:X}")
             self.logger.info(
                 f"=MEMORY CONTENTS= 0x{i:0{numlen}X}-0x{i+chunk_size-1:0{numlen}X} "
-                f"[{','.join(f"0x{x:02X}" for x in self.mem[i : min(i + chunk_size, end_addr+1)])}]"
+                f"[{','.join(f'0x{x:02X}' for x in self.mem[i : min(i + chunk_size, end_addr+1)])}]"
             )
