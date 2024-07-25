@@ -268,7 +268,6 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
 
         fsm_ahb_finish_st: begin
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
-            hready_r <= 1'b0;
             if (valid_addr_s == 1'b1) begin
               paddr_r <= ahb_slv_haddr_i[11:0];
               fsm_r <= fsm_apb_ctrl_st;
@@ -282,7 +281,6 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
 
 
         fsm_ahb_busy_finish_st: begin
-          hresp_r <= apb_resp_okay_e;
           if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
             hready_r <= 1'b1;
             fsm_r <= fsm_ahb_finish_st;

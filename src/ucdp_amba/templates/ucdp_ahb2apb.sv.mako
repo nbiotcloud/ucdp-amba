@@ -188,7 +188,9 @@ ${parent.logic(indent=indent, skip=skip)}\
 
         fsm_ahb_finish_st: begin
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
+% if not mod.errirq:
             hready_r <= ${ff_dly}1'b0;
+% endif
             if (valid_addr_s == 1'b1) begin
               paddr_r <= ahb_slv_haddr_i[${paddr_slice}];
               fsm_r <= ${ff_dly}fsm_apb_ctrl_st;
@@ -208,7 +210,9 @@ ${parent.logic(indent=indent, skip=skip)}\
 % endif
 
         fsm_ahb_busy_finish_st: begin
+% if not mod.errirq:
           hresp_r <= ${ff_dly}apb_resp_okay_e;
+% endif
           if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
             hready_r <= ${ff_dly}1'b1;
             fsm_r <= ${ff_dly}fsm_ahb_finish_st;
