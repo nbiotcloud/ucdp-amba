@@ -40,7 +40,7 @@ os.environ.update(
         "LANGUAGE": "en_US",
     }
 )
-nox.options.sessions = ["format", "test", "checkdeps", "checktypes", "doc"]
+nox.options.sessions = ["format", "test", "test_sv", "checkdeps", "checktypes", "doc"]
 
 
 @nox.session()
@@ -107,8 +107,8 @@ def dev(session: nox.Session) -> None:
 
 
 @nox.session()
-def test_rtl(session: nox.Session) -> None:
-    """Run RTL Tests - Additional Arguments are forwarded to `pytest`."""
+def test_sv(session: nox.Session) -> None:
+    """Run System Verilog Tests - Additional Arguments are forwarded to `pytest`."""
     _init(session)
     session.run_always("pdm", "install", "-G", ":all")
     with session.chdir("tests"):

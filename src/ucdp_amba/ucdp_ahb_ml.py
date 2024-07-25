@@ -30,7 +30,7 @@ from logging import getLogger
 from typing import ClassVar
 
 import ucdp as u
-from ucdp_glbl import AddrMaster, AddrMatrix, AddrRef, AddrSlave
+from ucdp_addr import AddrMaster, AddrMatrix, AddrRef, AddrSlave
 
 from . import types as t
 
@@ -231,17 +231,17 @@ class UcdpAhbMlExampleMod(u.AMod):
           dsp           X       X
     <BLANKLINE>
     <BLANKLINE>
-    Size: 3.75 GB
+    Size: 3932320 KB
     <BLANKLINE>
-    | Addrspace | Type     | Base       | Size                    | Attributes |
-    | --------- | ----     | ----       | ----                    | ---------- |
-    | reserved0 | Reserved | 0x0        | 536870912x32 (2 GB)     |            |
-    | misc      | Slave    | 0x80000000 | 5888x32 (23 KB)         |            |
-    | reserved1 | Reserved | 0x80005C00 | 469756160x32 (1.75 GB)  |            |
-    | ram       | Slave    | 0xF0000000 | 16384x32 (64 KB)        |            |
-    | periph    | Slave    | 0xF0010000 | 16384x32 (64 KB)        |            |
-    | misc      | Slave    | 0xF0020000 | 8192x32 (32 KB)         |            |
-    | reserved2 | Reserved | 0xF0028000 | 67067904x32 (255.84 MB) |            |
+    | Addrspace | Type     | Base       | Size                      | Attributes |
+    | --------- | ----     | ----       | ----                      | ---------- |
+    | reserved0 | Reserved | 0x0        | 536870912x32 (2 GB)       |            |
+    | misc      | Slave    | 0x80000000 | 5888x32 (23 KB)           |            |
+    | reserved1 | Reserved | 0x80005C00 | 469756160x32 (1834985 KB) |            |
+    | ram       | Slave    | 0xF0000000 | 16384x32 (64 KB)          |            |
+    | periph    | Slave    | 0xF0010000 | 16384x32 (64 KB)          |            |
+    | misc      | Slave    | 0xF0020000 | 8192x32 (32 KB)           |            |
+    | reserved2 | Reserved | 0xF0028000 | 67067904x32 (261984 KB)   |            |
     <BLANKLINE>
     """
 
