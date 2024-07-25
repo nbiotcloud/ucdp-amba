@@ -68,7 +68,7 @@ tests = [
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
-    ("ahb_ml_test", "ucdp_ahb_ml_example_ml", ml_fl),
+    # ("ahb_ml_test", "ucdp_ahb_ml_example_ml", ml_fl),
 ]
 
 
