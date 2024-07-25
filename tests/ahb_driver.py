@@ -199,8 +199,9 @@ class AHBMasterDriver:
         while self.hready == 0:
             await RisingEdge(self.clk)
         self.hwdata.value = 0xDEADDEAD
+        hexwidth = (2**size) * 2
         self.logger.info(
-            f"=MST WRITE= data: [{','.join(f"0x{x:0{(2**size) * 2}X}" for x in log_data)}] "
+            f"=MST WRITE= data: [{','.join(f'0x{x:0{hexwidth}X}' for x in log_data)}] "
             f"address: {hex(addr)} burst: {burst_type.name} burst length: {burst_length}  size: {size.name}"
         )
 
