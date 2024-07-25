@@ -372,7 +372,7 @@ class AHBSlaveDriver:
         bytes = int.to_bytes(wdata, byte_cnt, "little")
 
         self.logger.info(
-            f"=SLV WRITE= data: {hex(wdata)} data (bytes): {",".join([hex(x) for x in bytes])} "
+            f"=SLV WRITE= data: {hex(wdata)} data (bytes): {','.join([hex(x) for x in bytes])} "
             f"address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
         )
 
