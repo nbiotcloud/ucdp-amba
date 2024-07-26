@@ -56,6 +56,18 @@ module ucdp_apb2mem_example_a2m ( // ucdp_amba.ucdp_apb2mem.UcdpApb2memMod
 );
 
 
+
+
+assign mem_ena_o = apb_slv_penable_i & apb_slv_psel_i;
+assign mem_addr_o = apb_slv_paddr_i[9:2];
+assign mem_wena_o = apb_slv_pwrite_i;
+assign mem_wdata_o = apb_slv_pwdata_i;
+
+assign apb_slv_prdata_o = mem_rdata_i;
+assign apb_slv_pslverr_o = mem_err_i;
+assign apb_slv_pready_o = 1'b1;
+
+
 endmodule // ucdp_apb2mem_example_a2m
 
 `default_nettype wire
