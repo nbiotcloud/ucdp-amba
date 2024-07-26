@@ -3,12 +3,35 @@ name: test
 on: [push, pull_request, release]
 
 jobs:
+  # verilator does not work on 3.10 and 3.11 on github, so we skip testsv
+  build-nosv:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install --no-cache-dir nox
+      - name: Install Verilator
+        run: sudo apt install verilator
+      - name: NOX
+        run: nox -s format -s test -s checkdeps -s checktypes -s doc
+      - name: Upload coverage data to coveralls.io
+        run: nox -s dev -- coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+          COVERALLS_PARALLEL: true
+
   build:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        # 3.10 and 3.11 are not compatible with verilator (at the moment)
-        # python-version: ["3.10", "3.11", "3.12"]
         python-version: ["3.12"]
 
     steps:
@@ -32,7 +55,7 @@ jobs:
 
   coveralls:
     name: Indicate completion to coveralls.io
-    needs: build
+    needs: [build-nosv, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
