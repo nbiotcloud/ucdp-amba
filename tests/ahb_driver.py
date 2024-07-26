@@ -199,8 +199,9 @@ class AHBMasterDriver:
         while self.hready == 0:
             await RisingEdge(self.clk)
         self.hwdata.value = 0xDEADDEAD
+        hexwidth = (2**size) * 2
         self.logger.info(
-            f"=MST WRITE= data: [{','.join(f"0x{x:0{(2**size) * 2}X}" for x in log_data)}] "
+            f"=MST WRITE= data: [{','.join(f'0x{x:0{hexwidth}X}' for x in log_data)}] "
             f"address: {hex(addr)} burst: {burst_type.name} burst length: {burst_length}  size: {size.name}"
         )
 
@@ -245,7 +246,7 @@ class AHBMasterDriver:
             await RisingEdge(self.clk)
         rdata.append((self.hrdata.value.integer >> ((poffs << 3) & shmsk)) & szmsk)
         self.logger.info(
-            f"=MST READ= data: [{','.join(f"0x{x:0{self.data_width // 4}X}" for x in rdata)}] "
+            f"=MST READ= data: [{','.join(f'0x{x:0{self.data_width // 4}X}' for x in rdata)}] "
             f"address: {hex(addr)} burst: {burst_type.name} burst length: {burst_length}  size: {size.name}"
         )
         return tuple(rdata)
@@ -371,7 +372,7 @@ class AHBSlaveDriver:
         bytes = int.to_bytes(wdata, byte_cnt, "little")
 
         self.logger.info(
-            f"=SLV WRITE= data: {hex(wdata)} data (bytes): {",".join([hex(x) for x in bytes])} "
+            f"=SLV WRITE= data: {hex(wdata)} data (bytes): {','.join([hex(x) for x in bytes])} "
             f"address: {hex(addr.integer)} address (masked): {hex(masked_addr)} byte count: {byte_cnt}"
         )
 
@@ -430,5 +431,5 @@ class AHBSlaveDriver:
             numlen = len(f"{end_addr:X}")
             self.logger.info(
                 f"=MEMORY CONTENTS= 0x{i:0{numlen}X}-0x{i+chunk_size-1:0{numlen}X} "
-                f"[{','.join(f"0x{x:02X}" for x in self.mem[i : min(i + chunk_size, end_addr+1)])}]"
+                f"[{','.join(f'0x{x:02X}' for x in self.mem[i : min(i + chunk_size, end_addr+1)])}]"
             )
