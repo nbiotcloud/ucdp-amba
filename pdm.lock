@@ -1190,7 +1190,7 @@ name = "pyreadline3"
 version = "3.4.1"
 summary = "A python implementation of GNU readline."
 groups = ["default", "test"]
-marker = "sys_platform == \"win32\" and python_version >= \"3.8\""
+marker = "sys_platform == \"win32\""
 files = [
     {file = "pyreadline3-3.4.1-py3-none-any.whl", hash = "sha256:b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb"},
     {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
@@ -1527,7 +1527,7 @@ files = [
 
 [[package]]
 name = "ucdp"
-version = "0.9.0"
+version = "0.9.1"
 requires_python = "<4.0,>=3.10.0"
 summary = "Unified Chip Design Platform"
 groups = ["default", "test"]
@@ -1546,8 +1546,8 @@ dependencies = [
     "uniquer>=1.0.2",
 ]
 files = [
-    {file = "ucdp-0.9.0-py3-none-any.whl", hash = "sha256:a902ce339f268710378a49a19831bbbd373fcc2dd4b9a9e3824b8aa42b0df428"},
-    {file = "ucdp-0.9.0.tar.gz", hash = "sha256:550d80c1bc684c66d244ea4649bbf6709beb58393f5fd9c06184549c97ca0c70"},
+    {file = "ucdp-0.9.1-py3-none-any.whl", hash = "sha256:54e386847a1c8511898dcc9f6279d0fdbdac94d118c621d6579362c236b0e31b"},
+    {file = "ucdp-0.9.1.tar.gz", hash = "sha256:8aa99390133715a8f6bb0e6bcbe6870db0be07cceb03537d7de24ac5d2273808"},
 ]
 
 [[package]]
