@@ -194,10 +194,12 @@ async def ahb_ml_test(dut):
                 f"=MST WRITE TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name}; "
                 f"wdata:{[hex(w) for w in wdata]}"
             )
-            await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
+            err_resp = await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
+            assert not err_resp, "Unexpected error response"
         else:
             xdata = _calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
-            rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            err_resp, rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            assert not err_resp, "Unexpected error response"
             if tuple(rdata) == tuple(xdata):
                 log.info(
                     f"=MST READ TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name};\n"
