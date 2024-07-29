@@ -63,7 +63,6 @@ class APBMasterDriver:
         self.pready = pready
         self.pslverr = pslverr
         self.data_width = len(pwdata)
-
         self.logger = getLogger(name)
         if log_level is not None:  # important explicit check for None as 0 would be a valid value
             self.logger.setLevel(log_level)
@@ -72,7 +71,7 @@ class APBMasterDriver:
         self,
         addr: int,
         data: int,
-    ) -> None:
+    ) -> bool:
         """APB Write."""
         self.paddr.value = addr
         self.pwdata.value = data
@@ -89,9 +88,12 @@ class APBMasterDriver:
         self.pwrite.value = 0
         self.penable.value = 0
         self.psel.value = 0
-        self.logger.info(f"=MST WRITE= address: {hex(addr)}; data: {data}")
+        err_resp = bool(self.pslverr.value)
+        err = " ERROR" if err_resp else ""
+        self.logger.info(f"=MST WRIT{err}E= address: {hex(addr)} data: {data}")
+        return err_resp
 
-    async def read(self, addr: int) -> int:
+    async def read(self, addr: int) -> tuple[bool, int]:
         """APB Read."""
         self.paddr.value = addr
         self.pwrite.value = 0
@@ -105,8 +107,10 @@ class APBMasterDriver:
         self.penable.value = 0
         self.psel.value = 0
         rdata = self.prdata.value.integer
-        self.logger.info(f"=MST READ= address: {hex(addr)}; data: {rdata}")
-        return tuple(rdata)
+        err_resp = bool(self.pslverr.value)
+        err = " ERROR" if err_resp else ""
+        self.logger.info(f"=MST READ{err}= address: {hex(addr)} data: {rdata}")
+        return tuple(err_resp, rdata)
 
     async def reset(self):
         """Reset APB Master."""
@@ -163,7 +167,7 @@ class APBSlaveDriver:
         """APB Read."""
         rdata = int.from_bytes(self.mem[addr.integer : addr.integer + self.byte_width], "little")
 
-        self.logger.info(f"=SLV READ= address: {hex(addr.integer)}; data: {hex(rdata)}")
+        self.logger.info(f"=SLV READ= address: {hex(addr.integer)} data: {hex(rdata)}")
         return rdata
 
     def _write(self, addr: int, data: int) -> None:
@@ -174,7 +178,7 @@ class APBSlaveDriver:
         bytes = int.to_bytes(wdata, self.byte_width, "little")
 
         self.logger.info(
-            f"=SLV WRITE= address: {hex(addr.integer)}; "
+            f"=SLV WRITE= address: {hex(addr.integer)} "
             f"data: {hex(wdata)} data (bytes): {','.join([hex(x) for x in bytes])}"
         )
         self.mem[addr.integer : addr.integer + self.byte_width] = bytes

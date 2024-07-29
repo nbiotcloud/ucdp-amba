@@ -187,6 +187,9 @@ ${parent.logic(indent=indent, skip=skip)}\
         end
 
         fsm_ahb_finish_st: begin
+% if not mod.errirq:
+          hresp_r <= ${ff_dly}apb_resp_okay_e;
+% endif
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
 % if not mod.errirq:
             hready_r <= ${ff_dly}1'b0;

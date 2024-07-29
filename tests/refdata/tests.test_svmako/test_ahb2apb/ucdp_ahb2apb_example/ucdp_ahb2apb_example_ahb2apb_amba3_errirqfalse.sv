@@ -276,6 +276,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
         end
 
         fsm_ahb_finish_st: begin
+          hresp_r <= apb_resp_okay_e;
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
             hready_r <= 1'b0;
             if (valid_addr_s == 1'b1) begin
