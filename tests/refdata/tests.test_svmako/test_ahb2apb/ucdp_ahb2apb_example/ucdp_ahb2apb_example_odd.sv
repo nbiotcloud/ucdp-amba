@@ -275,16 +275,19 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
         end
 
         fsm_ahb_finish_st: begin
-          hresp_r <= apb_resp_okay_e;
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
             hready_r <= 1'b0;
             if (valid_addr_s == 1'b1) begin
               paddr_r <= ahb_slv_haddr_i[13:0];
+              apb_foo_sel_r <= apb_foo_sel_s;
+              apb_bar_sel_r <= apb_bar_sel_s;
+              apb_baz_sel_r <= apb_baz_sel_s;
               fsm_r <= fsm_apb_ctrl_st;
             end else begin
               fsm_r <= fsm_ahb_err_st;
             end
           end else begin
+            hresp_r <= apb_resp_okay_e;
             fsm_r <= fsm_idle_st;
           end
         end
@@ -311,6 +314,13 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
 
         default: begin
           hready_r <= 1'b1;
+          hresp_r <= apb_resp_okay_e;
+          pwrite_r <= 1'b0;
+          pwdata_r <= 32'h00000000;
+          penable_r <= 1'b0;
+          apb_foo_sel_r <= 1'b0;
+          apb_bar_sel_r <= 1'b0;
+          apb_baz_sel_r <= 1'b0;
           fsm_r <= fsm_idle_st;
         end
       endcase

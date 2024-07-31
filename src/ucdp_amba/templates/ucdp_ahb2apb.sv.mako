@@ -187,20 +187,23 @@ ${parent.logic(indent=indent, skip=skip)}\
         end
 
         fsm_ahb_finish_st: begin
-% if not mod.errirq:
-          hresp_r <= ${ff_dly}apb_resp_okay_e;
-% endif
           if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
 % if not mod.errirq:
             hready_r <= ${ff_dly}1'b0;
 % endif
             if (valid_addr_s == 1'b1) begin
               paddr_r <= ahb_slv_haddr_i[${paddr_slice}];
+% for aspc in mod.addrmap:
+              apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
+% endfor
               fsm_r <= ${ff_dly}fsm_apb_ctrl_st;
             end else begin
               fsm_r <= ${ff_dly}fsm_ahb_err_st;
             end
           end else begin
+% if not mod.errirq:
+            hresp_r <= ${ff_dly}apb_resp_okay_e;
+% endif
             fsm_r <= ${ff_dly}fsm_idle_st;
           end
         end
@@ -233,6 +236,15 @@ ${parent.logic(indent=indent, skip=skip)}\
 
         default: begin
           hready_r <= ${ff_dly}1'b1;
+% if not mod.errirq:
+          hresp_r <= ${ff_dly}apb_resp_okay_e;
+% endif
+          pwrite_r <= ${ff_dly}1'b0;
+          pwdata_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth)};
+          penable_r <= ${ff_dly}1'b0;
+% for aspc in mod.addrmap:
+          apb_${aspc.name}_sel_r <= ${ff_dly}1'b0;
+% endfor
           fsm_r <= ${ff_dly}fsm_idle_st;
         end
       endcase
