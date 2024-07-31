@@ -33,7 +33,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from tests.ahb_driver import AHBMasterDriver  #, BurstType, SizeType
+from tests.ahb_driver import AHBMasterDriver, BurstType
 from tests.apb_driver import APBSlaveDriver
 
 
@@ -42,6 +42,7 @@ async def wait_clocks(clock, cycles):
     """Helper Function."""
     for _ in range(cycles):
         await RisingEdge(clock)
+
 
 @cocotb.test()
 async def ahb2apb_test(dut):
@@ -85,10 +86,8 @@ async def ahb2apb_test(dut):
         pready=dut.apb_slv_foo_pready_i,
         pslverr=dut.apb_slv_foo_pslverr_i,
         pready_delay=0,
-        size_bytes=4*1024,
-        err_addr={"w":list(range(16)),
-                  "r":list(range(0x20, 0x30)),
-                  "rw":list(range(0x40, 0x50))}
+        size_bytes=4 * 1024,
+        err_addr={"w": list(range(16)), "r": list(range(0x20, 0x30)), "rw": list(range(0x40, 0x50))},
     )
 
     bar_slv = APBSlaveDriver(
@@ -122,7 +121,7 @@ async def ahb2apb_test(dut):
         pready=dut.apb_slv_baz_pready_i,
         pslverr=dut.apb_slv_baz_pslverr_i,
         pready_delay=0,
-        size_bytes=13*1024,
+        size_bytes=13 * 1024,
     )
 
     cocotb.start_soon(Clock(hclk, period=10).start())
@@ -138,6 +137,7 @@ async def ahb2apb_test(dut):
     await wait_clocks(hclk, 10)
 
     await ahb_mst.write(0x0000300, 0xBEEFBEEF)
+    await ahb_mst.write(0x0000014, 0xAFFEBEEF)
     await wait_clocks(hclk, random.randint(1, 4))
 
     await ahb_mst.write(0x0001200, 0xAFFEAFFE)
@@ -147,14 +147,18 @@ async def ahb2apb_test(dut):
     await wait_clocks(hclk, random.randint(1, 4))
 
     await wait_clocks(hclk, 10)
-    await ahb_mst.read(0x0000300)
-
+    err_resp, rdata = await ahb_mst.read(0x0000300)
+    print("BOZO", err_resp, rdata)
 
     await wait_clocks(hclk, 10)
-    await ahb_mst.write(0x0000008, 0xdead)
+    await ahb_mst.write(0x0000008, 0xDEAD)
+
     await wait_clocks(hclk, 5)
-    await ahb_mst.read(0x0000008)
+    await ahb_mst.read(0x0000004)
+
     await wait_clocks(hclk, 5)
     await ahb_mst.read(0x0000024)
 
+    await wait_clocks(hclk, 5)
+    await ahb_mst.write(0x000000218, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4)
     await wait_clocks(hclk, 30)
