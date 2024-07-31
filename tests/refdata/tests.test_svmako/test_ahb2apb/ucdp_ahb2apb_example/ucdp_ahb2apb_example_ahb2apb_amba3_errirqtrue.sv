@@ -322,22 +322,22 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
 
   // Slave 'default':
-  assign apb_slv_default_paddr_o   = paddr_r[11:0];
-  assign apb_slv_default_pwrite_o  = pwrite_r;
-  assign apb_slv_default_pwdata_o  = pwdata_s;
-  assign apb_slv_default_penable_o = penable_r;
+  assign apb_slv_default_paddr_o   = (apb_default_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
+  assign apb_slv_default_pwrite_o  = pwrite_r & apb_default_sel_r;
+  assign apb_slv_default_pwdata_o  = (apb_default_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_default_penable_o = penable_r & apb_default_sel_r;
   assign apb_slv_default_psel_o    = apb_default_sel_r;
   // Slave 'slv3':
-  assign apb_slv_slv3_paddr_o      = paddr_r[11:0];
-  assign apb_slv_slv3_pwrite_o     = pwrite_r;
-  assign apb_slv_slv3_pwdata_o     = pwdata_s;
-  assign apb_slv_slv3_penable_o    = penable_r;
+  assign apb_slv_slv3_paddr_o      = (apb_slv3_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
+  assign apb_slv_slv3_pwrite_o     = pwrite_r & apb_slv3_sel_r;
+  assign apb_slv_slv3_pwdata_o     = (apb_slv3_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_slv3_penable_o    = penable_r & apb_slv3_sel_r;
   assign apb_slv_slv3_psel_o       = apb_slv3_sel_r;
   // Slave 'slv5':
-  assign apb_slv_slv5_paddr_o      = paddr_r[11:0];
-  assign apb_slv_slv5_pwrite_o     = pwrite_r;
-  assign apb_slv_slv5_pwdata_o     = pwdata_s;
-  assign apb_slv_slv5_penable_o    = penable_r;
+  assign apb_slv_slv5_paddr_o      = (apb_slv5_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
+  assign apb_slv_slv5_pwrite_o     = pwrite_r & apb_slv5_sel_r;
+  assign apb_slv_slv5_pwdata_o     = (apb_slv5_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_slv5_penable_o    = penable_r & apb_slv5_sel_r;
   assign apb_slv_slv5_psel_o       = apb_slv5_sel_r;
 
   assign irq_o = irq_r;

@@ -338,22 +338,22 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
 
   // Slave 'foo':
-  assign apb_slv_foo_paddr_o   = paddr_r[11:0];
-  assign apb_slv_foo_pwrite_o  = pwrite_r;
-  assign apb_slv_foo_pwdata_o  = pwdata_s;
-  assign apb_slv_foo_penable_o = penable_r;
+  assign apb_slv_foo_paddr_o   = (apb_foo_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
+  assign apb_slv_foo_pwrite_o  = pwrite_r & apb_foo_sel_r;
+  assign apb_slv_foo_pwdata_o  = (apb_foo_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_foo_penable_o = penable_r & apb_foo_sel_r;
   assign apb_slv_foo_psel_o    = apb_foo_sel_r;
   // Slave 'bar':
-  assign apb_slv_bar_paddr_o   = paddr_r[9:0];
-  assign apb_slv_bar_pwrite_o  = pwrite_r;
-  assign apb_slv_bar_pwdata_o  = pwdata_s;
-  assign apb_slv_bar_penable_o = penable_r;
+  assign apb_slv_bar_paddr_o   = (apb_bar_sel_r  == 1'b1) ? paddr_r[9:0] : 10'h000;
+  assign apb_slv_bar_pwrite_o  = pwrite_r & apb_bar_sel_r;
+  assign apb_slv_bar_pwdata_o  = (apb_bar_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_bar_penable_o = penable_r & apb_bar_sel_r;
   assign apb_slv_bar_psel_o    = apb_bar_sel_r;
   // Slave 'baz':
-  assign apb_slv_baz_paddr_o   = paddr_r[13:0];
-  assign apb_slv_baz_pwrite_o  = pwrite_r;
-  assign apb_slv_baz_pwdata_o  = pwdata_s;
-  assign apb_slv_baz_penable_o = penable_r;
+  assign apb_slv_baz_paddr_o   = (apb_baz_sel_r  == 1'b1) ? paddr_r[13:0] : 14'h0000;
+  assign apb_slv_baz_pwrite_o  = pwrite_r & apb_baz_sel_r;
+  assign apb_slv_baz_pwdata_o  = (apb_baz_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_baz_penable_o = penable_r & apb_baz_sel_r;
   assign apb_slv_baz_psel_o    = apb_baz_sel_r;
 
 

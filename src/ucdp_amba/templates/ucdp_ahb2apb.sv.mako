@@ -264,12 +264,15 @@ ${parent.logic(indent=indent, skip=skip)}\
 <%
   outp_asgn = Align(rtrim=True)
   outp_asgn.set_separators(" = ", first="  assign ")
+  dzero = rslvr._get_uint_value(0, mod.datawidth)
   for aspc in mod.addrmap:
+    asz = num.calc_unsigned_width(aspc.size - 1)
+    azero = rslvr._get_uint_value(0, asz)
     outp_asgn.add_spacer(f"  // Slave {aspc.name!r}:")
-    outp_asgn.add_row(f"apb_slv_{aspc.name}_paddr_o", f"paddr_r[{num.calc_unsigned_width(aspc.size - 1)-1}:0];")
-    outp_asgn.add_row(f"apb_slv_{aspc.name}_pwrite_o", "pwrite_r;")
-    outp_asgn.add_row(f"apb_slv_{aspc.name}_pwdata_o", "pwdata_s;")
-    outp_asgn.add_row(f"apb_slv_{aspc.name}_penable_o", "penable_r;")
+    outp_asgn.add_row(f"apb_slv_{aspc.name}_paddr_o", f"(apb_{aspc.name}_sel_r  == 1'b1) ? paddr_r[{asz-1}:0] : {azero};")
+    outp_asgn.add_row(f"apb_slv_{aspc.name}_pwrite_o", f"pwrite_r & apb_{aspc.name}_sel_r;")
+    outp_asgn.add_row(f"apb_slv_{aspc.name}_pwdata_o", f"(apb_{aspc.name}_sel_r  == 1'b1) ? pwdata_s : {dzero};")
+    outp_asgn.add_row(f"apb_slv_{aspc.name}_penable_o", f"penable_r & apb_{aspc.name}_sel_r;")
     outp_asgn.add_row(f"apb_slv_{aspc.name}_psel_o", f"apb_{aspc.name}_sel_r;")
 %>
   // ------------------------------------------------------
