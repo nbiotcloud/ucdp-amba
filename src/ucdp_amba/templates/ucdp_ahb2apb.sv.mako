@@ -55,7 +55,13 @@ ${parent.logic(indent=indent, skip=skip)}\
   // ------------------------------------------------------
   // address decoding
   // ------------------------------------------------------
-  always_comb begin: proc_addr_decaccess_proc
+  always_comb begin: proc_xfer_dec_proc
+    if ((ahb_slv_sel_s == 1'b1) &&
+        ((ahb_slv_htrans_i == ahb_trans_nonseq_e) || (ahb_slv_htrans_i == ahb_trans_seq_e))) begin
+      new_xfer_s = 1'b1;
+    end else begin
+      new_xfer_s = 1'b0;
+    end
     ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     valid_addr_s = 1'b0;
 % for aspc in mod.addrmap:
@@ -87,12 +93,23 @@ ${parent.logic(indent=indent, skip=skip)}\
   rdy_terms = " |\n               ".join(rdy_terms)
   err_terms = " |\n                ".join(err_terms)
   dta_terms = " |\n               ".join(dta_terms)
+  sels = [f"apb_{aspc.name}_sel_r" for aspc in mod.addrmap]
+  if nr_slv > 1:
+    selgrps = [" | ".join(sels[i:i+4]) for i in range(0, nr_slv, 4)]
+    selgrps = " |\n                 ".join(selgrps)
+    nosels = f"~({selgrps})"
+  else:
+    nosels = f"~{sels[0]}"
 %>
   // ------------------------------------------------------
   // slave input multiplexing
   // ------------------------------------------------------
   always_comb begin: proc_slave_mux
     pready_s = ${rdy_terms};
+% if mod.optbw:
+    hready_s = hready_r & ((pready_s & ~pslverr_s) |
+               ${nosels});
+% endif
     pslverr_s = ${err_terms};
     prdata_s = ${dta_terms};
   end
@@ -121,13 +138,11 @@ ${parent.logic(indent=indent, skip=skip)}\
     end else begin
       case (fsm_r)
         fsm_idle_st: begin
-          if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
-% if not mod.errirq:
-            hready_r <= ${ff_dly}1'b0;
-% endif
+          if (new_xfer_s == 1'b1) begin
             if (valid_addr_s == 1'b1) begin
-% if mod.errirq:
               hready_r <= ${ff_dly}1'b0;
+% if mod.errirq:
+              irq_r <= ${ff_dly}1'b0;
 % endif
               paddr_r <= ${ff_dly}ahb_slv_haddr_i[${paddr_slice}];
               pwrite_r <= ${ff_dly}ahb_slv_hwrite_i;
@@ -135,12 +150,18 @@ ${parent.logic(indent=indent, skip=skip)}\
               apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
 % endfor
               fsm_r <= ${ff_dly}fsm_apb_ctrl_st;
-% if not mod.errirq:
             end else begin
+% if mod.errirq:
+              irq_r <= ${ff_dly}1'b1;
+% else:
               hresp_r <= ${ff_dly}apb_resp_error_e;
               fsm_r <= ${ff_dly}fsm_ahb_err_st;
 % endif
             end
+% if mod.errirq:
+          end else begin
+            irq_r <= ${ff_dly}1'b0;
+% endif
           end
         end
 
@@ -149,6 +170,9 @@ ${parent.logic(indent=indent, skip=skip)}\
             pwdata_r <= ${ff_dly}ahb_slv_hwdata_i;
           end
           penable_r <= ${ff_dly}1'b1;
+% if mod.optbw:
+          hready_r <= ${ff_dly}1'b1;
+% endif
           fsm_r <= ${ff_dly}fsm_apb_data_st;
         end
 
@@ -159,78 +183,28 @@ ${parent.logic(indent=indent, skip=skip)}\
             apb_${aspc.name}_sel_r <= ${ff_dly}1'b0;
 % endfor
             prdata_r <= ${ff_dly}prdata_s;
-            if (ahb_slv_htrans_i == ahb_trans_busy_e) begin
 % if mod.errirq:
-              fsm_r <= ${ff_dly}fsm_ahb_busy_finish_st;
+            hresp_r <= ${ff_dly}apb_resp_okay_e;
+            hready_r <= ${ff_dly}1'b1;
+            irq_r <= ${ff_dly}pslverr_s;
+            fsm_r <= ${ff_dly}fsm_idle_st;
 % else:
-              if (pslverr_s == 1'b0) begin
-                fsm_r <= ${ff_dly}fsm_ahb_busy_finish_st;
-              end else begin
-                fsm_r <= ${ff_dly}fsm_ahb_busy_err_st;
-              end
-% endif
-            end else begin
-% if mod.errirq:
+            if (pslverr_s == 1'b0) begin
               hready_r <= ${ff_dly}1'b1;
-              fsm_r <= ${ff_dly}fsm_ahb_finish_st;
-% else:
-              if (pslverr_s == 1'b0) begin
-                hready_r <= ${ff_dly}1'b1;
-                fsm_r <= ${ff_dly}fsm_ahb_finish_st;
-              end else begin
-                hresp_r <= ${ff_dly}apb_resp_error_e;
-                fsm_r <= ${ff_dly}fsm_ahb_err_st;
-              end
-% endif
-            end
-          end
-        end
-
-        fsm_ahb_finish_st: begin
-          if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
-% if not mod.errirq:
-            hready_r <= ${ff_dly}1'b0;
-% endif
-            if (valid_addr_s == 1'b1) begin
-              paddr_r <= ahb_slv_haddr_i[${paddr_slice}];
-% for aspc in mod.addrmap:
-              apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
-% endfor
-              fsm_r <= ${ff_dly}fsm_apb_ctrl_st;
+              hresp_r <= ${ff_dly}apb_resp_okay_e;
+              fsm_r <= ${ff_dly}fsm_idle_st;
             end else begin
+              hresp_r <= ${ff_dly}apb_resp_error_e;
               fsm_r <= ${ff_dly}fsm_ahb_err_st;
             end
-          end else begin
-% if not mod.errirq:
-            hresp_r <= ${ff_dly}apb_resp_okay_e;
 % endif
-            fsm_r <= ${ff_dly}fsm_idle_st;
           end
         end
 
 % if not mod.errirq:
         fsm_ahb_err_st: begin
           hready_r <= ${ff_dly}1'b1;
-          fsm_r <= ${ff_dly}fsm_ahb_finish_st;
-        end
-% endif
-
-        fsm_ahb_busy_finish_st: begin
-% if not mod.errirq:
-          hresp_r <= ${ff_dly}apb_resp_okay_e;
-% endif
-          if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
-            hready_r <= ${ff_dly}1'b1;
-            fsm_r <= ${ff_dly}fsm_ahb_finish_st;
-          end
-        end
-
-% if not mod.errirq:
-        fsm_ahb_busy_err_st: begin
-          if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
-            hresp_r <= ${ff_dly}apb_resp_error_e;
-            fsm_r <= ${ff_dly}fsm_ahb_err_st;
-          end
+          fsm_r <= ${ff_dly}fsm_idle_st;
         end
 % endif
 
@@ -248,16 +222,6 @@ ${parent.logic(indent=indent, skip=skip)}\
           fsm_r <= ${ff_dly}fsm_idle_st;
         end
       endcase
-% if mod.errirq:
-
-      if ((fsm_r == fsm_idle_st) && (ahb_slv_htrans_i != ahb_trans_idle_e) && (valid_addr_s == 1'b0)) begin
-        irq_r <= ${ff_dly}1'b1;
-      end else if ((fsm_r == fsm_apb_data_st) && (pready_s == 1'b1)) begin
-        irq_r <= ${ff_dly}pslverr_s;
-      end else begin
-        irq_r <= ${ff_dly}1'b0;
-      end
-% endif
     end
   end
 
@@ -278,7 +242,11 @@ ${parent.logic(indent=indent, skip=skip)}\
   // ------------------------------------------------------
   // output Assignments
   // ------------------------------------------------------
+% if mod.optbw:
+  assign ahb_slv_hreadyout_o = hready_s;
+% else:
   assign ahb_slv_hreadyout_o = hready_r;
+% endif
 % if mod.errirq:
   assign ahb_slv_hresp_o = apb_resp_okay_e;
 % else:
@@ -286,7 +254,7 @@ ${parent.logic(indent=indent, skip=skip)}\
 % endif
   assign ahb_slv_hrdata_o = prdata_r;
 
-  assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
+  assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
 
 ${outp_asgn.get()}
 % if mod.errirq:

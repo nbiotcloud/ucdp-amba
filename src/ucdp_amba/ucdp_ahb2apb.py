@@ -54,26 +54,25 @@ class Ahb2ApbFsmType(u.AEnumType):
     FSM Type for AHB to APB Bridge.
     """
 
-    keytype: u.UintType = u.UintType(3)
+    keytype: u.UintType = u.UintType(2)
     title: str = "AHB to APB FSM Type"
     comment: str = "AHB to APB FSM Type"
-    writeopt: bool = False
 
     def _build(self):
         self._add(0, "idle", "No transfer")
         self._add(1, "apb_ctrl", "Control Phase")
-        if self.writeopt:
-            self._add(2, "apb_data_wr", "Optimized Write")
-        self._add(3, "apb_data", "Data Phase")
-        self._add(4, "ahb_finish", "Finish Phase")
-        self._add(5, "ahb_err", "Error Phase")
-        self._add(6, "ahb_busy_finish", "Finish w/ Busy")
-        self._add(7, "ahb_busy_err", "Error w/ Busy")
+        self._add(2, "apb_data", "Data Phase")
+        self._add(3, "ahb_err", "Error Phase")
 
 
 class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
     """
     AHB to APB Bridge.
+
+    Keyword Args:
+        proto (AmbaProto): Defines Protocol
+        errirq (bool): Use Error Interrupt instead of standard AHB Response Signalling
+        optbw (bool): Optimized Bandwidth, faster response but increased logic depth
 
     >>> class Mod(u.AMod):
     ...     def _build(self):
@@ -103,7 +102,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
 
     proto: t.AmbaProto = t.AmbaProto()
     errirq: bool = False
-    writeopt: bool = False
+    optbw: bool = False
     is_sub: bool = True
     default_size: u.Bytes | None = 4096
     ahb_addrwidth: int = 32
@@ -175,11 +174,14 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         self.add_type_consts(t.AhbTransType())
         self.add_type_consts(t.ApbReadyType())
         self.add_type_consts(t.ApbRespType())
-        self.add_type_consts(Ahb2ApbFsmType(writeopt=self.writeopt), name="fsm", item_suffix="st")
-        self.add_signal(u.BitType(), "ahb_slv_sel_s")
+        self.add_type_consts(Ahb2ApbFsmType(), name="fsm", item_suffix="st")
+        self.add_signal(u.BitType(), "new_xfer_s")
         self.add_signal(u.BitType(), "valid_addr_s")
+        self.add_signal(u.BitType(), "ahb_slv_sel_s")
         self.add_signal(Ahb2ApbFsmType(), "fsm_r")
         self.add_signal(t.AhbReadyType(), "hready_r")
+        if self.optbw:
+            self.add_signal(t.AhbReadyType(), "hready_s")
         if not self.errirq:
             self.add_signal(t.ApbRespType(), "hresp_r")
         rng_bits = [num.calc_unsigned_width(aspc.size - 1) for aspc in self.addrmap]

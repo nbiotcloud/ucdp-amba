@@ -99,48 +99,46 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
   //  Local Parameter
   // ------------------------------------------------------
   // ahb_trans
-  localparam integer       ahb_trans_width_p      = 2;
-  localparam         [1:0] ahb_trans_min_p        = 2'h0; // AHB Transfer Type
-  localparam         [1:0] ahb_trans_max_p        = 2'h3; // AHB Transfer Type
-  localparam         [1:0] ahb_trans_idle_e       = 2'h0;
-  localparam         [1:0] ahb_trans_busy_e       = 2'h1;
-  localparam         [1:0] ahb_trans_nonseq_e     = 2'h2;
-  localparam         [1:0] ahb_trans_seq_e        = 2'h3;
-  localparam         [1:0] ahb_trans_default_p    = 2'h0; // AHB Transfer Type
+  localparam integer       ahb_trans_width_p   = 2;
+  localparam         [1:0] ahb_trans_min_p     = 2'h0; // AHB Transfer Type
+  localparam         [1:0] ahb_trans_max_p     = 2'h3; // AHB Transfer Type
+  localparam         [1:0] ahb_trans_idle_e    = 2'h0;
+  localparam         [1:0] ahb_trans_busy_e    = 2'h1;
+  localparam         [1:0] ahb_trans_nonseq_e  = 2'h2;
+  localparam         [1:0] ahb_trans_seq_e     = 2'h3;
+  localparam         [1:0] ahb_trans_default_p = 2'h0; // AHB Transfer Type
   // apb_ready
-  localparam integer       apb_ready_width_p      = 1;
-  localparam               apb_ready_min_p        = 1'b0; // APB Transfer Done
-  localparam               apb_ready_max_p        = 1'b1; // APB Transfer Done
-  localparam               apb_ready_busy_e       = 1'b0;
-  localparam               apb_ready_done_e       = 1'b1;
-  localparam               apb_ready_default_p    = 1'b1; // APB Transfer Done
+  localparam integer       apb_ready_width_p   = 1;
+  localparam               apb_ready_min_p     = 1'b0; // APB Transfer Done
+  localparam               apb_ready_max_p     = 1'b1; // APB Transfer Done
+  localparam               apb_ready_busy_e    = 1'b0;
+  localparam               apb_ready_done_e    = 1'b1;
+  localparam               apb_ready_default_p = 1'b1; // APB Transfer Done
   // apb_resp
-  localparam integer       apb_resp_width_p       = 1;
-  localparam               apb_resp_min_p         = 1'b0; // APB Response Error
-  localparam               apb_resp_max_p         = 1'b1; // APB Response Error
-  localparam               apb_resp_okay_e        = 1'b0;
-  localparam               apb_resp_error_e       = 1'b1;
-  localparam               apb_resp_default_p     = 1'b0; // APB Response Error
+  localparam integer       apb_resp_width_p    = 1;
+  localparam               apb_resp_min_p      = 1'b0; // APB Response Error
+  localparam               apb_resp_max_p      = 1'b1; // APB Response Error
+  localparam               apb_resp_okay_e     = 1'b0;
+  localparam               apb_resp_error_e    = 1'b1;
+  localparam               apb_resp_default_p  = 1'b0; // APB Response Error
   // fsm
-  localparam integer       fsm_width_p            = 3;
-  localparam         [2:0] fsm_min_p              = 3'h0; // AHB to APB FSM Type
-  localparam         [2:0] fsm_max_p              = 3'h7; // AHB to APB FSM Type
-  localparam         [2:0] fsm_idle_st            = 3'h0;
-  localparam         [2:0] fsm_apb_ctrl_st        = 3'h1;
-  localparam         [2:0] fsm_apb_data_st        = 3'h3;
-  localparam         [2:0] fsm_ahb_finish_st      = 3'h4;
-  localparam         [2:0] fsm_ahb_err_st         = 3'h5;
-  localparam         [2:0] fsm_ahb_busy_finish_st = 3'h6;
-  localparam         [2:0] fsm_ahb_busy_err_st    = 3'h7;
-  localparam         [2:0] fsm_default_p          = 3'h0; // AHB to APB FSM Type
+  localparam integer       fsm_width_p         = 2;
+  localparam         [1:0] fsm_min_p           = 2'h0; // AHB to APB FSM Type
+  localparam         [1:0] fsm_max_p           = 2'h3; // AHB to APB FSM Type
+  localparam         [1:0] fsm_idle_st         = 2'h0;
+  localparam         [1:0] fsm_apb_ctrl_st     = 2'h1;
+  localparam         [1:0] fsm_apb_data_st     = 2'h2;
+  localparam         [1:0] fsm_ahb_err_st      = 2'h3;
+  localparam         [1:0] fsm_default_p       = 2'h0; // AHB to APB FSM Type
 
 
   // ------------------------------------------------------
   //  Signals
   // ------------------------------------------------------
-  logic        ahb_slv_sel_s;
+  logic        new_xfer_s;
   logic        valid_addr_s;
-  logic [2:0]  fsm_r;             // AHB to APB FSM Type
+  logic        ahb_slv_sel_s;
+  logic [1:0]  fsm_r;             // AHB to APB FSM Type
   logic        hready_r;          // AHB Transfer Done
   logic        hresp_r;           // APB Response Error
   logic [11:0] paddr_r;           // APB Bus Address
@@ -162,7 +160,13 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
   // ------------------------------------------------------
   // address decoding
   // ------------------------------------------------------
-  always_comb begin: proc_addr_decaccess_proc
+  always_comb begin: proc_xfer_dec_proc
+    if ((ahb_slv_sel_s == 1'b1) &&
+        ((ahb_slv_htrans_i == ahb_trans_nonseq_e) || (ahb_slv_htrans_i == ahb_trans_seq_e))) begin
+      new_xfer_s = 1'b1;
+    end else begin
+      new_xfer_s = 1'b0;
+    end
     ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     valid_addr_s = 1'b0;
     apb_default_sel_s = 1'b0;
@@ -226,9 +230,9 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
     end else begin
       case (fsm_r)
         fsm_idle_st: begin
-          if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
-            hready_r <= 1'b0;
+          if (new_xfer_s == 1'b1) begin
             if (valid_addr_s == 1'b1) begin
+              hready_r <= 1'b0;
               paddr_r <= ahb_slv_haddr_i[11:0];
               pwrite_r <= ahb_slv_hwrite_i;
               apb_default_sel_r <= apb_default_sel_s;
@@ -257,60 +261,20 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
             apb_slv3_sel_r <= 1'b0;
             apb_slv5_sel_r <= 1'b0;
             prdata_r <= prdata_s;
-            if (ahb_slv_htrans_i == ahb_trans_busy_e) begin
-              if (pslverr_s == 1'b0) begin
-                fsm_r <= fsm_ahb_busy_finish_st;
-              end else begin
-                fsm_r <= fsm_ahb_busy_err_st;
-              end
+            if (pslverr_s == 1'b0) begin
+              hready_r <= 1'b1;
+              hresp_r <= apb_resp_okay_e;
+              fsm_r <= fsm_idle_st;
             end else begin
-              if (pslverr_s == 1'b0) begin
-                hready_r <= 1'b1;
-                fsm_r <= fsm_ahb_finish_st;
-              end else begin
-                hresp_r <= apb_resp_error_e;
-                fsm_r <= fsm_ahb_err_st;
-              end
-            end
-          end
-        end
-
-        fsm_ahb_finish_st: begin
-          if ((ahb_slv_sel_s == 1'b1) && (ahb_slv_htrans_i != ahb_trans_idle_e)) begin
-            hready_r <= 1'b0;
-            if (valid_addr_s == 1'b1) begin
-              paddr_r <= ahb_slv_haddr_i[11:0];
-              apb_default_sel_r <= apb_default_sel_s;
-              apb_slv3_sel_r <= apb_slv3_sel_s;
-              apb_slv5_sel_r <= apb_slv5_sel_s;
-              fsm_r <= fsm_apb_ctrl_st;
-            end else begin
+              hresp_r <= apb_resp_error_e;
               fsm_r <= fsm_ahb_err_st;
             end
-          end else begin
-            hresp_r <= apb_resp_okay_e;
-            fsm_r <= fsm_idle_st;
           end
         end
 
         fsm_ahb_err_st: begin
           hready_r <= 1'b1;
-          fsm_r <= fsm_ahb_finish_st;
-        end
-
-        fsm_ahb_busy_finish_st: begin
-          hresp_r <= apb_resp_okay_e;
-          if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
-            hready_r <= 1'b1;
-            fsm_r <= fsm_ahb_finish_st;
-          end
-        end
-
-        fsm_ahb_busy_err_st: begin
-          if (ahb_slv_htrans_i == ahb_trans_seq_e) begin
-            hresp_r <= apb_resp_error_e;
-            fsm_r <= fsm_ahb_err_st;
-          end
+          fsm_r <= fsm_idle_st;
         end
 
         default: begin
@@ -336,7 +300,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
   assign ahb_slv_hresp_o = hresp_r;
   assign ahb_slv_hrdata_o = prdata_r;
 
-  assign pwdata_s = (fsm_r == fsm_apb_ctrl_st) ? ahb_slv_hwdata_i : pwdata_r;
+  assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
 
   // Slave 'default':
   assign apb_slv_default_paddr_o   = (apb_default_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
