@@ -106,12 +106,12 @@ ${parent.logic(indent=indent, skip=skip)}\
   // ------------------------------------------------------
   always_comb begin: proc_slave_mux
     pready_s = ${rdy_terms};
+    pslverr_s = ${err_terms};
+    prdata_s = ${dta_terms};
 % if mod.optbw:
     hready_s = hready_r & ((pready_s & ~pslverr_s) |
                ${nosels});
 % endif
-    pslverr_s = ${err_terms};
-    prdata_s = ${dta_terms};
   end
 
   // ------------------------------------------------------
@@ -144,21 +144,25 @@ ${parent.logic(indent=indent, skip=skip)}\
           if (new_xfer_s == 1'b1) begin
             if (valid_addr_s == 1'b1) begin
               hready_r <= ${ff_dly}1'b0;
+% if not mod.errirq:
               hresp_r <= ${ff_dly}apb_resp_okay_e;
+% endif
               paddr_r <= ${ff_dly}ahb_slv_haddr_i[${paddr_slice}];
               pwrite_r <= ${ff_dly}ahb_slv_hwrite_i;
 % for aspc in mod.addrmap:
               apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
 % endfor
               fsm_r <= ${ff_dly}fsm_apb_ctrl_st;
-% if not mod.errirq:
+% if mod.errirq:
+            end
+% else:
             end else begin
               hresp_r <= ${ff_dly}apb_resp_error_e;
               fsm_r <= ${ff_dly}fsm_ahb_err_st;
-% endif
             end
           end else begin
             hresp_r <= ${ff_dly}apb_resp_okay_e;
+% endif
           end
         end
 
@@ -179,7 +183,6 @@ ${parent.logic(indent=indent, skip=skip)}\
 % if mod.optbw:
 %   if mod.errirq:
             irq_r <= ${ff_dly}pslverr_s | (new_xfer_s & ~valid_addr_s);
-            hresp_r <= ${ff_dly}apb_resp_okay_e;
             if (new_xfer_s == 1'b1) begin
 %   else:
             if (pslverr_s == 1'b1) begin
@@ -234,7 +237,6 @@ ${parent.logic(indent=indent, skip=skip)}\
 %   endfor
             pwrite_r <= ${ff_dly}1'b0;
 %   if mod.errirq:
-            hresp_r <= ${ff_dly}apb_resp_okay_e;
             hready_r <= ${ff_dly}1'b1;
             pwrite_r <= ${ff_dly}1'b0;
             irq_r <= ${ff_dly}pslverr_s;
