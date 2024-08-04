@@ -235,7 +235,7 @@ class UcdpAhb2apbExampleMod(u.AMod):
                 ahb2apb.add_slave("slv3", proto=t.AMBA3)
                 ahb2apb.add_slave("slv5", proto=amba5)
 
-        ahb2apb = UcdpAhb2apbMod(self, "u_odd", ahb_addrwidth=27, errirq=False)
+        ahb2apb = UcdpAhb2apbMod(self, "u_odd", ahb_addrwidth=27, errirq=False, optbw=True)
         ahb2apb.add_slave("foo")
         ahb2apb.add_slave("bar", size="1KB")
         ahb2apb.add_slave("baz", size="13kB")

@@ -37,6 +37,26 @@ from tests.ahb_driver import AHBMasterDriver, BurstType
 from tests.apb_driver import APBSlaveDriver
 
 
+def _calc_wrmem(offs: int, blen: int, mmask: int, wdata: list[int]) -> bytearray:
+    """Calculate Reference Write Data in Bytes."""
+    memimg = bytearray(blen << 2)
+    for widx in range(blen):
+        midx = (offs + (widx << 2)) & mmask
+        memimg[midx : (midx + 4)] = int.to_bytes(wdata[widx], 4, "little")
+    return memimg
+
+
+def _calc_expected(offs: int, blen: int, mmask: int, mem: bytearray) -> list[int]:
+    """Calculate Expected Read Data."""
+    xdata = []
+    for widx in range(blen):
+        xd = 0
+        for bidx in range(4):
+            xd |= mem[(offs & ~mmask) + ((offs + (widx << 2) + bidx) & mmask)] << (bidx << 3)
+        xdata.append(xd)
+    return xdata
+
+
 # TODO put this is a generic tb lib
 async def wait_clocks(clock, cycles):
     """Helper Function."""
@@ -87,7 +107,7 @@ async def ahb2apb_test(dut):
         pslverr=dut.apb_slv_foo_pslverr_i,
         pready_delay=0,
         size_bytes=4 * 1024,
-        err_addr={"w": list(range(16)), "r": list(range(0x20, 0x30)), "rw": list(range(0x40, 0x50))},
+        err_addr={"w": list(range(0x400, 0x410)), "r": list(range(0x420, 0x430)), "rw": list(range(0x440, 0x450))},
     )
 
     bar_slv = APBSlaveDriver(
@@ -124,6 +144,20 @@ async def ahb2apb_test(dut):
         size_bytes=13 * 1024,
     )
 
+    mem = [bytearray(4 * 1024), bytearray(1024), bytearray(13 * 1024)]
+
+    baseaddr = [0x0, 0x1000, 0x4000]
+
+    btypes = (
+        BurstType.SINGLE,
+        BurstType.WRAP4,
+        BurstType.INCR4,
+        BurstType.WRAP8,
+        BurstType.INCR8,
+        BurstType.WRAP16,
+        BurstType.INCR16,
+    )
+
     cocotb.start_soon(Clock(hclk, period=10).start())
 
     cocotb.start_soon(foo_slv.run())
@@ -136,29 +170,105 @@ async def ahb2apb_test(dut):
     rst_an.value = 1
     await wait_clocks(hclk, 10)
 
-    await ahb_mst.write(0x0000300, 0xBEEFBEEF)
-    await ahb_mst.write(0x0000014, 0xAFFEBEEF)
-    await wait_clocks(hclk, random.randint(1, 4))
+    # randomized accesses
+    for _ in range(20):
+        tgt = random.randint(0, 2)
+        btype = random.choice(btypes)
+        if btype == BurstType.SINGLE:
+            blen = 1
+            mmask = 0x3
+        else:
+            blen = 2 << (btype >> 1)
+            mmask = (4 << (((btype - 2) >> 1) + 2)) - 1
+        offs = random.randint(0, 255) << 2
+        if btype in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4):
+            offs &= ~mmask  # make it burst aligned
 
-    await ahb_mst.write(0x0001200, 0xAFFEAFFE)
-    await wait_clocks(hclk, random.randint(1, 4))
+        if random.randint(0, 1):
+            wdata = [random.randint(1, 0xFFFFFFFF) for i in range(blen)]
+            mem[tgt][(offs & ~mmask) : (offs & ~mmask) + (blen << 2)] = _calc_wrmem(
+                offs=offs, blen=blen, mmask=mmask, wdata=wdata
+            )
+            log.info(
+                f"=MST WRITE TRANSFER= target: {tgt}; offs:{hex(offs)}; burst:{btype.name}; "
+                f"wdata:{[hex(w) for w in wdata]}"
+            )
+            err_resp = await ahb_mst.write(baseaddr[tgt] + offs, wdata, burst_type=btype)
+            assert not err_resp, "Unexpected error response"
+        else:
+            xdata = _calc_expected(offs=offs, blen=blen, mmask=mmask, mem=mem[tgt])
+            err_resp, rdata = await ahb_mst.read(baseaddr[tgt] + offs, burst_type=btype)
+            assert not err_resp, "Unexpected error response"
+            if tuple(rdata) == tuple(xdata):
+                log.info(
+                    f"=MST READ TRANSFER= target: {tgt}; offs:{hex(offs)}; burst:{btype.name};\n"
+                    f"> rdata: {[hex(w) for w in rdata]};"
+                )
+            else:
+                log.error(
+                    f"=MST READ TRANSFER MISMATCH= target: {tgt}; offs:{hex(offs)}; burst:{btype.name};\n"
+                    f"> expected: {[hex(w) for w in xdata]};\n"
+                    f"> got:      {[hex(w) for w in rdata]};"
+                )
+                raise AssertionError("Read data compare mismatch.")
 
-    await ahb_mst.write(0x0004100, 0x76543210)
-    await wait_clocks(hclk, random.randint(1, 4))
+        await wait_clocks(hclk, random.randint(0, 5))
+    await wait_clocks(hclk, 20)
 
-    await wait_clocks(hclk, 10)
-    err_resp, rdata = await ahb_mst.read(0x0000300)
-    print("BOZO", err_resp, rdata)
+    # directed tests for expected error responses
+    # 0x400...0x40F error on write
+    # 0x420...0x42F error on read
+    # 0x440...0x44F error in read and write
 
-    await wait_clocks(hclk, 10)
-    await ahb_mst.write(0x0000008, 0xDEAD)
-
+    log.info("=MST WRITE TRANSFER= target: 0; offs:0x408; with expected Error Response")
+    err_resp = await ahb_mst.write(0x0000408, 0xDEAD)
+    assert err_resp, "Missed expected Error Response"
     await wait_clocks(hclk, 5)
-    await ahb_mst.read(0x0000004)
 
+    err_resp, rdata = await ahb_mst.read(0x0000408)
+    assert not err_resp, "Unexpected error response"
+    if tuple(rdata) == (0,):
+        log.info(f"=MST READ TRANSFER= target: 0; offs:0x408;\n> rdata: {[hex(w) for w in rdata]};")
+    else:
+        log.error(
+            "=MST READ TRANSFER MISMATCH= target: 0; offs:0x408;\n"
+            "> expected: [0x0];\n"
+            f"> got:      {[hex(w) for w in rdata]};"
+        )
+        raise AssertionError("Read data compare mismatch.")
     await wait_clocks(hclk, 5)
-    await ahb_mst.read(0x0000024)
 
+    log.info("=MST WRITE TRANSFER= target: 0; offs:0x424; wdata:[0xAFFE]")
+    err_resp = await ahb_mst.write(0x0000424, 0xAFFE)
+    assert not err_resp, "Unexpected error response"
     await wait_clocks(hclk, 5)
-    await ahb_mst.write(0x000000218, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4)
+
+    log.info("=MST READ TRANSFER= target: 0; offs:0x424; with expected Error Response")
+    err_resp, rdata = await ahb_mst.read(0x0000424)
+    assert err_resp, "Missed expected Error Response"
+    if tuple(rdata) != (0,):
+        log.error(
+            "=MST READ TRANSFER MISMATCH= target: 0; offs:0x424;\n"
+            "> expected: [0x0];\n"
+            f"> got:      {[hex(w) for w in rdata]};"
+        )
+        raise AssertionError("Read data compare mismatch.")
+    await wait_clocks(hclk, 5)
+
+    log.info("=MST WRITE TRANSFER= target: 0; offs:0x44C; with expected Error Response")
+    err_resp = await ahb_mst.write(0x000044C, 0xDEAD)
+    assert err_resp, "Missed expected Error Response"
+    await wait_clocks(hclk, 5)
+
+    log.info("=MST READ TRANSFER= target: 0; offs:0x44C; with expected Error Response")
+    err_resp, rdata = await ahb_mst.read(0x000044C)
+    assert err_resp, "Missed expected Error Response"
+    if tuple(rdata) != (0,):
+        log.error(
+            "=MST READ TRANSFER MISMATCH= target: 0; offs:0x44C;\n"
+            "> expected: [0x0];\n"
+            f"> got:      {[hex(w) for w in rdata]};"
+        )
+        raise AssertionError("Read data compare mismatch.")
+
     await wait_clocks(hclk, 30)

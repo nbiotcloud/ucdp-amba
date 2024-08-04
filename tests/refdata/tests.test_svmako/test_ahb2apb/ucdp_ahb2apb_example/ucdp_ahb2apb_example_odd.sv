@@ -139,6 +139,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   logic        ahb_slv_sel_s;
   logic [1:0]  fsm_r;         // AHB to APB FSM Type
   logic        hready_r;      // AHB Transfer Done
+  logic        hready_s;      // AHB Transfer Done
   logic        hresp_r;       // APB Response Error
   logic [13:0] paddr_r;       // APB Bus Address
   logic        pwrite_r;      // APB Write Enable
@@ -202,12 +203,14 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
     pready_s = (apb_slv_foo_pready_i & apb_foo_sel_r) |
                (apb_slv_bar_pready_i & apb_bar_sel_r) |
                (apb_slv_baz_pready_i & apb_baz_sel_r);
+    hready_s = hready_r & ((pready_s & ~pslverr_s) |
+               ~(apb_foo_sel_r | apb_bar_sel_r | apb_baz_sel_r));
     pslverr_s = (apb_slv_foo_pslverr_i & apb_foo_sel_r) |
                 (apb_slv_bar_pslverr_i & apb_bar_sel_r) |
                 (apb_slv_baz_pslverr_i & apb_baz_sel_r);
-    prdata_s = (apb_slv_foo_prdata_i & {32{apb_foo_sel_r}}) |
-               (apb_slv_bar_prdata_i & {32{apb_bar_sel_r}}) |
-               (apb_slv_baz_prdata_i & {32{apb_baz_sel_r}});
+    prdata_s = (apb_slv_foo_prdata_i & {32{(~pwrite_r & penable_r & apb_foo_sel_r)}}) |
+               (apb_slv_bar_prdata_i & {32{(~pwrite_r & penable_r & apb_bar_sel_r)}}) |
+               (apb_slv_baz_prdata_i & {32{(~pwrite_r & penable_r & apb_baz_sel_r)}});
   end
 
   // ------------------------------------------------------
@@ -221,17 +224,18 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
       paddr_r <= 14'h0000;
       pwrite_r <= 1'b0;
       pwdata_r <= 32'h00000000;
+      prdata_r <= 32'h00000000;
       penable_r <= 1'b0;
       apb_foo_sel_r <= 1'b0;
       apb_bar_sel_r <= 1'b0;
       apb_baz_sel_r <= 1'b0;
-      prdata_r <= 32'h00000000;
     end else begin
       case (fsm_r)
         fsm_idle_st: begin
           if (new_xfer_s == 1'b1) begin
             if (valid_addr_s == 1'b1) begin
               hready_r <= 1'b0;
+              hresp_r <= apb_resp_okay_e;
               paddr_r <= ahb_slv_haddr_i[13:0];
               pwrite_r <= ahb_slv_hwrite_i;
               apb_foo_sel_r <= apb_foo_sel_s;
@@ -242,6 +246,8 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
               hresp_r <= apb_resp_error_e;
               fsm_r <= fsm_ahb_err_st;
             end
+          end else begin
+            hresp_r <= apb_resp_okay_e;
           end
         end
 
@@ -250,23 +256,44 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
             pwdata_r <= ahb_slv_hwdata_i;
           end
           penable_r <= 1'b1;
+          hready_r <= 1'b1;
           fsm_r <= fsm_apb_data_st;
         end
 
         fsm_apb_data_st: begin
           if (pready_s == 1'b1) begin
             penable_r <= 1'b0;
-            apb_foo_sel_r <= 1'b0;
-            apb_bar_sel_r <= 1'b0;
-            apb_baz_sel_r <= 1'b0;
-            prdata_r <= prdata_s;
-            if (pslverr_s == 1'b0) begin
-              hready_r <= 1'b1;
-              hresp_r <= apb_resp_okay_e;
-              fsm_r <= fsm_idle_st;
-            end else begin
+            if (pslverr_s == 1'b1) begin
+              hready_r <= 1'b0;
               hresp_r <= apb_resp_error_e;
+              apb_foo_sel_r <= 1'b0;
+              apb_bar_sel_r <= 1'b0;
+              apb_baz_sel_r <= 1'b0;
               fsm_r <= fsm_ahb_err_st;
+            end else if (new_xfer_s == 1'b1) begin
+              hready_r <= 1'b0;
+              if (valid_addr_s == 1'b1) begin
+                paddr_r <= ahb_slv_haddr_i[13:0];
+                pwrite_r <= ahb_slv_hwrite_i;
+                apb_foo_sel_r <= apb_foo_sel_s;
+                apb_bar_sel_r <= apb_bar_sel_s;
+                apb_baz_sel_r <= apb_baz_sel_s;
+                fsm_r <= fsm_apb_ctrl_st;
+              end else begin
+                apb_foo_sel_r <= 1'b0;
+                apb_bar_sel_r <= 1'b0;
+                apb_baz_sel_r <= 1'b0;
+                hresp_r <= apb_resp_error_e;
+                fsm_r <= fsm_ahb_err_st;
+              end
+            end else begin // no new xfer and no pslverr
+              penable_r <= 1'b0;
+              hready_r <= 1'b1;
+              pwrite_r <= 1'b0;
+              apb_foo_sel_r <= 1'b0;
+              apb_bar_sel_r <= 1'b0;
+              apb_baz_sel_r <= 1'b0;
+              fsm_r <= fsm_idle_st;
             end
           end
         end
@@ -295,28 +322,28 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   // ------------------------------------------------------
   // output Assignments
   // ------------------------------------------------------
-  assign ahb_slv_hreadyout_o = hready_r;
+  assign ahb_slv_hreadyout_o = hready_s;
+  assign ahb_slv_hrdata_o = prdata_s;
   assign ahb_slv_hresp_o = hresp_r;
-  assign ahb_slv_hrdata_o = prdata_r;
 
   assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
 
   // Slave 'foo':
   assign apb_slv_foo_paddr_o   = (apb_foo_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
   assign apb_slv_foo_pwrite_o  = pwrite_r & apb_foo_sel_r;
-  assign apb_slv_foo_pwdata_o  = (apb_foo_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_foo_pwdata_o  = ((pwrite_r & apb_foo_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_foo_penable_o = penable_r & apb_foo_sel_r;
   assign apb_slv_foo_psel_o    = apb_foo_sel_r;
   // Slave 'bar':
   assign apb_slv_bar_paddr_o   = (apb_bar_sel_r  == 1'b1) ? paddr_r[9:0] : 10'h000;
   assign apb_slv_bar_pwrite_o  = pwrite_r & apb_bar_sel_r;
-  assign apb_slv_bar_pwdata_o  = (apb_bar_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_bar_pwdata_o  = ((pwrite_r & apb_bar_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_bar_penable_o = penable_r & apb_bar_sel_r;
   assign apb_slv_bar_psel_o    = apb_bar_sel_r;
   // Slave 'baz':
   assign apb_slv_baz_paddr_o   = (apb_baz_sel_r  == 1'b1) ? paddr_r[13:0] : 14'h0000;
   assign apb_slv_baz_pwrite_o  = pwrite_r & apb_baz_sel_r;
-  assign apb_slv_baz_pwdata_o  = (apb_baz_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_baz_pwdata_o  = ((pwrite_r & apb_baz_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_baz_penable_o = penable_r & apb_baz_sel_r;
   assign apb_slv_baz_psel_o    = apb_baz_sel_r;
 

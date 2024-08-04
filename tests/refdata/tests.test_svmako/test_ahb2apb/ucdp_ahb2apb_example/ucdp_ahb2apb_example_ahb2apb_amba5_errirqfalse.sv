@@ -208,9 +208,9 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
     pslverr_s = (apb_slv_default_pslverr_i & apb_default_sel_r) |
                 (apb_slv_slv3_pslverr_i & apb_slv3_sel_r) |
                 (apb_slv_slv5_pslverr_i & apb_slv5_sel_r);
-    prdata_s = (apb_slv_default_prdata_i & {32{apb_default_sel_r}}) |
-               (apb_slv_slv3_prdata_i & {32{apb_slv3_sel_r}}) |
-               (apb_slv_slv5_prdata_i & {32{apb_slv5_sel_r}});
+    prdata_s = (apb_slv_default_prdata_i & {32{(~pwrite_r & penable_r & apb_default_sel_r)}}) |
+               (apb_slv_slv3_prdata_i & {32{(~pwrite_r & penable_r & apb_slv3_sel_r)}}) |
+               (apb_slv_slv5_prdata_i & {32{(~pwrite_r & penable_r & apb_slv5_sel_r)}});
   end
 
   // ------------------------------------------------------
@@ -224,17 +224,18 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
       paddr_r <= 12'h000;
       pwrite_r <= 1'b0;
       pwdata_r <= 32'h00000000;
+      prdata_r <= 32'h00000000;
       penable_r <= 1'b0;
       apb_default_sel_r <= 1'b0;
       apb_slv3_sel_r <= 1'b0;
       apb_slv5_sel_r <= 1'b0;
-      prdata_r <= 32'h00000000;
     end else begin
       case (fsm_r)
         fsm_idle_st: begin
           if (new_xfer_s == 1'b1) begin
             if (valid_addr_s == 1'b1) begin
               hready_r <= 1'b0;
+              hresp_r <= apb_resp_okay_e;
               paddr_r <= ahb_slv_haddr_i[11:0];
               pwrite_r <= ahb_slv_hwrite_i;
               apb_default_sel_r <= apb_default_sel_s;
@@ -245,6 +246,8 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
               hresp_r <= apb_resp_error_e;
               fsm_r <= fsm_ahb_err_st;
             end
+          end else begin
+            hresp_r <= apb_resp_okay_e;
           end
         end
 
@@ -259,10 +262,11 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
         fsm_apb_data_st: begin
           if (pready_s == 1'b1) begin
             penable_r <= 1'b0;
+            prdata_r <= prdata_s;
             apb_default_sel_r <= 1'b0;
             apb_slv3_sel_r <= 1'b0;
             apb_slv5_sel_r <= 1'b0;
-            prdata_r <= prdata_s;
+            pwrite_r <= 1'b0;
             if (pslverr_s == 1'b0) begin
               hready_r <= 1'b1;
               hresp_r <= apb_resp_okay_e;
@@ -299,27 +303,27 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse ( // ucdp_amba.ucdp_ahb2ap
   // output Assignments
   // ------------------------------------------------------
   assign ahb_slv_hreadyout_o = hready_r;
-  assign ahb_slv_hresp_o = hresp_r;
   assign ahb_slv_hrdata_o = prdata_r;
+  assign ahb_slv_hresp_o = hresp_r;
 
   assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
 
   // Slave 'default':
   assign apb_slv_default_paddr_o   = (apb_default_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
   assign apb_slv_default_pwrite_o  = pwrite_r & apb_default_sel_r;
-  assign apb_slv_default_pwdata_o  = (apb_default_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_default_pwdata_o  = ((pwrite_r & apb_default_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_default_penable_o = penable_r & apb_default_sel_r;
   assign apb_slv_default_psel_o    = apb_default_sel_r;
   // Slave 'slv3':
   assign apb_slv_slv3_paddr_o      = (apb_slv3_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
   assign apb_slv_slv3_pwrite_o     = pwrite_r & apb_slv3_sel_r;
-  assign apb_slv_slv3_pwdata_o     = (apb_slv3_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_slv3_pwdata_o     = ((pwrite_r & apb_slv3_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_slv3_penable_o    = penable_r & apb_slv3_sel_r;
   assign apb_slv_slv3_psel_o       = apb_slv3_sel_r;
   // Slave 'slv5':
   assign apb_slv_slv5_paddr_o      = (apb_slv5_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
   assign apb_slv_slv5_pwrite_o     = pwrite_r & apb_slv5_sel_r;
-  assign apb_slv_slv5_pwdata_o     = (apb_slv5_sel_r  == 1'b1) ? pwdata_s : 32'h00000000;
+  assign apb_slv_slv5_pwdata_o     = ((pwrite_r & apb_slv5_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_slv5_penable_o    = penable_r & apb_slv5_sel_r;
   assign apb_slv_slv5_psel_o       = apb_slv5_sel_r;
 
