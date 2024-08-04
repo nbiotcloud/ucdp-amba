@@ -26,7 +26,7 @@
 import ucdp as u
 import ucdpsv as usv
 from aligntext import Align
-from ucdp_glbl.addrslave import SlaveAddrspace
+from ucdp_addr.addrslave import SlaveAddrspace
 from icdutil import num
 
 

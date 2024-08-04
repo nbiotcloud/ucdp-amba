@@ -32,8 +32,8 @@ from typing import ClassVar
 import ucdp as u
 from humannum import bytes_
 from icdutil import num
-from ucdp_glbl import AddrDecoder, AddrRef, AddrSlave
-from ucdp_glbl.types import LevelIrqType
+from ucdp_addr import AddrDecoder, AddrRef, AddrSlave
+from ucdp_glbl.irq import LevelIrqType
 
 from . import types as t
 

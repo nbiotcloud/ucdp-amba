@@ -26,7 +26,7 @@
 import ucdp as u
 import ucdpsv as usv
 import ucdp_amba.types as t
-from ucdp_glbl.addrslave import SlaveAddrspace
+from ucdp_addr.addrslave import SlaveAddrspace
 from ucdp_amba.ucdp_ahb_ml import Master, UcdpAhbMlMod
 from collections.abc import Iterator
 from aligntext import Align
