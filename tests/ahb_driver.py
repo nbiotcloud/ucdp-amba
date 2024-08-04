@@ -226,7 +226,7 @@ class AHBMasterDriver:
 
     async def read(
         self, addr: int, burst_length: int = 1, size: SizeType = SizeType.WORD, burst_type: BurstType = BurstType.SINGLE
-    ) -> tuple[int]:
+    ) -> tuple[bool, tuple[int]]:
         """AHB Read (Burst)."""
         base, offs, mask, burst_length = _prep_addr_iter(
             addr=addr, burst_length=burst_length, size=size, burst_type=burst_type
