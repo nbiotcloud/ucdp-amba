@@ -110,7 +110,7 @@ class APBMasterDriver:
         err_resp = bool(self.pslverr.value)
         err = " ERROR" if err_resp else ""
         self.logger.info(f"=MST READ{err}= address: {hex(addr)} data: {rdata}")
-        return tuple(err_resp, rdata)
+        return (err_resp, rdata)
 
     async def reset(self):
         """Reset APB Master."""
@@ -165,23 +165,22 @@ class APBSlaveDriver:
 
     def _read(self, addr: int) -> int:
         """APB Read."""
-        rdata = int.from_bytes(self.mem[addr.integer : addr.integer + self.byte_width], "little")
+        rdata = int.from_bytes(self.mem[addr : addr + self.byte_width], "little")
 
-        self.logger.info(f"=SLV READ= address: {hex(addr.integer)} data: {hex(rdata)}")
+        self.logger.info(f"=SLV READ= address: {hex(addr)} data: {hex(rdata)}")
         return rdata
 
     def _write(self, addr: int, data: int) -> None:
         """APB Write."""
         # TODO: handle APB5 with pstrb
 
-        wdata = data.integer
+        wdata = data
         bytes = int.to_bytes(wdata, self.byte_width, "little")
 
         self.logger.info(
-            f"=SLV WRITE= address: {hex(addr.integer)} "
-            f"data: {hex(wdata)} data (bytes): {','.join([hex(x) for x in bytes])}"
+            f"=SLV WRITE= address: {hex(addr)} data: {hex(wdata)} data (bytes): {','.join([hex(x) for x in bytes])}"
         )
-        self.mem[addr.integer : addr.integer + self.byte_width] = bytes
+        self.mem[addr : addr + self.byte_width] = bytes
 
     def _check_err_addr(self, paddr: int, pwrite: int) -> bool:
         """Check for Error Address."""
@@ -208,7 +207,7 @@ class APBSlaveDriver:
                 self.pready.value = 1
                 self.pslverr.value = 0
                 if (self.state == 1) and self.pwrite.value:
-                    self._write(self.paddr.value, self.pwdata.value)
+                    self._write(self.paddr.value.integer, self.pwdata.value.integer)
             # Check if there's an APB request starting
             if self.psel.value and not self.penable.value:
                 self.state = 1
@@ -222,7 +221,7 @@ class APBSlaveDriver:
 
             if (self.state == 1) and not self.pwrite.value:
                 # Handle read request (need to apply read value for next cycle)
-                rdata = self._read(self.paddr.value)
+                rdata = self._read(self.paddr.value.integer)
                 self.prdata.value = rdata
             else:
                 self.prdata.value = 0xDEADBEEF

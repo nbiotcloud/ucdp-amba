@@ -372,14 +372,14 @@ class AHBSlaveDriver:
         # extract the data from the bus
         alignmask = byte_cnt - 1
         shift_mask = self.data_width - 1
-        datashift_bit = (addr.integer << 3) & shift_mask
-        masked_addr = self.addrmask & addr.integer
-        unaligned = alignmask & addr.integer
+        datashift_bit = (addr << 3) & shift_mask
+        masked_addr = self.addrmask & addr
+        unaligned = alignmask & addr
         assert not unaligned, f"Address is unaligned for read with HSIZE of {SizeType(size)!r} at HADDR {addr}."
 
         rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt], "little") << datashift_bit
         hexdata = f"0x{rdata:0{2<<size}X}"
-        self.logger.info(f"=SLV READ= address: {hex(addr.integer)} data: {hexdata} size: {SizeType(size).name}")
+        self.logger.info(f"=SLV READ= address: {hex(addr)} data: {hexdata} size: {SizeType(size).name}")
         self.logger.debug(
             f"=SLV READ= alignment mask: {hex(alignmask)} "
             f"shift mask: {hex(shift_mask)} datashift in bits: {hex(datashift_bit)} "
@@ -398,16 +398,16 @@ class AHBSlaveDriver:
         lower_datamask = (2 ** (byte_cnt * 8)) - 1
         # datashift_byte = addr.integer & lower_addrmask
         # datashift_bit = datashift_byte * 8
-        datashift_bit = (addr.integer << 3) & shift_mask
-        unaligned = alignmask & addr.integer
+        datashift_bit = (addr << 3) & shift_mask
+        unaligned = alignmask & addr
         assert not unaligned, f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}."
 
-        wdata = (data.integer >> datashift_bit) & lower_datamask
+        wdata = (data >> datashift_bit) & lower_datamask
         bytes = int.to_bytes(wdata, byte_cnt, "little")
-        masked_addr = self.addrmask & addr.integer
+        masked_addr = self.addrmask & addr
 
         hexdata = f"0x{wdata:0{2<<size}X}"
-        self.logger.info(f"=SLV WRITE= address: {hex(addr.integer)} data: {hexdata} size: {SizeType(size).name}")
+        self.logger.info(f"=SLV WRITE= address: {hex(addr)} data: {hexdata} size: {SizeType(size).name}")
         self.logger.debug(
             f"=SLV WRITE= alignment mask: {hex(alignmask)} shift mask: {hex(shift_mask)} "
             f"lower data mask {hex(lower_datamask)} datashift in bits: {hex(datashift_bit)} "
@@ -444,9 +444,9 @@ class AHBSlaveDriver:
                     self._write(self.curr_addr, self.curr_size, self.curr_wdata)
             # Check if there's an AHB request
             if self.hsel.value and self.htrans.value in (TransType.SEQ, TransType.NONSEQ):
-                self.curr_addr = self.haddr.value
-                self.curr_write = self.hwrite.value
-                self.curr_size = self.hsize.value
+                self.curr_addr = self.haddr.value.integer
+                self.curr_write = self.hwrite.value.integer
+                self.curr_size = self.hsize.value.integer
                 self.state = 1
             else:
                 self.state = 0
