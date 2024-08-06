@@ -71,7 +71,7 @@ class AhbFsmMlType(u.AEnumType):
         self._add(3, "transfer_wait", "Transfer Wait for Grant")
         self._add(4, "error0", "Pre-Error (wait for HREADY)")
         self._add(5, "error1", "1st Error Cycle")
-        self._add(6, "error2", "2ns Error Cycle")
+        self._add(6, "error2", "2nd Error Cycle")
 
 
 class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):

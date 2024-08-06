@@ -33,6 +33,7 @@ from typing import Literal
 
 from cocotb.handle import SimHandle
 from cocotb.triggers import RisingEdge
+from humannum import Hex
 
 
 class BurstType(IntEnum):
@@ -146,6 +147,7 @@ class AHBMasterDriver:
         self.hresp = hresp
         self.hsel = hsel  # allowed to be None as it might not be present (e.g. Multilayer input)
         self.hreadyout = hreadyout  # allowed to be None as it might not be present (e.g. Multilayer input)
+        self.addr_width = len(haddr)
         self.data_width = len(hwdata)
 
         self.logger = getLogger(name)
@@ -290,8 +292,33 @@ class AHBMasterDriver:
         self.hburst.value = 0
         self.hprot.value = 0
 
+    def calc_wrmem(self, offs: int, size: SizeType, blen: int, mmask: int, wdata: list[int]) -> bytearray:
+        """Calculate Reference Write Data for a Burst in Bytes."""
+        memimg = bytearray(blen << size)
+        for widx in range(blen):
+            midx = (offs + (widx << size)) & mmask
+            memimg[midx : (midx + (1 << size))] = int.to_bytes(wdata[widx], 1 << size, "little")
+        return memimg
+
+    def calc_expected(self, offs: int, size: SizeType, blen: int, mmask: int, mem: bytearray) -> list[int]:
+        """Calculate Expected Read Data for a Burst according to Size."""
+        xdata = []
+        for widx in range(blen):
+            xd = 0
+            for bidx in range(1 << size):
+                xd |= mem[(offs & ~mmask) + ((offs + (widx << size) + bidx) & mmask)] << (bidx << 3)
+            xdata.append(xd)
+        return xdata
+
     def _info_log(
-        self, rw: str, addr: int, burst_type: BurstType, burst_length: int, size: SizeType, data: list, err_resp: bool
+        self,
+        rw: str,
+        addr: int,
+        burst_type: BurstType,
+        burst_length: int,
+        size: SizeType,
+        data: list[int],
+        err_resp: bool,
     ) -> None:
         """Handle Master Logging."""
         if burst_type == BurstType.INCR:
@@ -299,8 +326,10 @@ class AHBMasterDriver:
         else:
             blenstr = ""
         err = " ERROR RESP" if err_resp else ""
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = ",".join(str(Hex(x, 2 << size)) for x in data)
         self.logger.info(
-            f"=MST {rw}{err}= address: {hex(addr)} data: [{','.join(f"0x{x:0{2<<size}X}" for x in data)}] "
+            f"=MST {rw}{err}= address: {hexaddr} data: [{hexdata}] "
             f"size: {size.name} burst: {burst_type.name}{blenstr}"
         )
 
@@ -346,6 +375,7 @@ class AHBSlaveDriver:
         self.hresp = hresp
         self.hsel = hsel
         self.hprot = hprot  # allowed to be None as it might not be present/unsupported by a slave
+        self.addr_width = len(haddr)
         self.data_width = len(hwdata)
         self.err_addr = err_addr
 
@@ -378,8 +408,9 @@ class AHBSlaveDriver:
         assert not unaligned, f"Address is unaligned for read with HSIZE of {SizeType(size)!r} at HADDR {addr}."
 
         rdata = int.from_bytes(self.mem[masked_addr : masked_addr + byte_cnt], "little") << datashift_bit
-        hexdata = f"0x{rdata:0{2<<size}X}"
-        self.logger.info(f"=SLV READ= address: {hex(addr)} data: {hexdata} size: {SizeType(size).name}")
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = str(Hex(rdata, 8 << size))
+        self.logger.info(f"=SLV READ= address: {hexaddr} data: {hexdata} size: {SizeType(size).name}")
         self.logger.debug(
             f"=SLV READ= alignment mask: {hex(alignmask)} "
             f"shift mask: {hex(shift_mask)} datashift in bits: {hex(datashift_bit)} "
@@ -394,10 +425,7 @@ class AHBSlaveDriver:
         shift_mask = self.data_width - 1
         # extract the data from the bus
         alignmask = byte_cnt - 1
-        # lower_addrmask = (byte_cnt * 2) - 1
         lower_datamask = (2 ** (byte_cnt * 8)) - 1
-        # datashift_byte = addr.integer & lower_addrmask
-        # datashift_bit = datashift_byte * 8
         datashift_bit = (addr << 3) & shift_mask
         unaligned = alignmask & addr
         assert not unaligned, f"Address is unaligned for write with HSIZE of {size} at HADDR {addr}."
@@ -406,8 +434,9 @@ class AHBSlaveDriver:
         bytes = int.to_bytes(wdata, byte_cnt, "little")
         masked_addr = self.addrmask & addr
 
-        hexdata = f"0x{wdata:0{2<<size}X}"
-        self.logger.info(f"=SLV WRITE= address: {hex(addr)} data: {hexdata} size: {SizeType(size).name}")
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = str(Hex(wdata, 8 << size))
+        self.logger.info(f"=SLV WRITE= address: {hexaddr} data: {hexdata} size: {SizeType(size).name}")
         self.logger.debug(
             f"=SLV WRITE= alignment mask: {hex(alignmask)} shift mask: {hex(shift_mask)} "
             f"lower data mask {hex(lower_datamask)} datashift in bits: {hex(datashift_bit)} "
@@ -452,7 +481,8 @@ class AHBSlaveDriver:
                 self.state = 0
             if self.state and self._check_err_addr(self.curr_addr, self.curr_write):
                 acc = "WRITE" if self.curr_write else "READ"
-                self.logger.info(f"=SLV ERROR RESP for {acc}= address: {hex(self.curr_addr)}")
+                hexaddr = str(Hex(self.curr_addr, self.addr_width))
+                self.logger.info(f"=SLV ERROR RESP for {acc}= address: {hexaddr}")
                 self.state = 2
             if self.state and not self.curr_write:
                 # Handle read request (need to apply read value for next cycle)
@@ -479,6 +509,7 @@ class AHBSlaveDriver:
             )
             return
         for i in range(start_addr, end_addr + 1, chunk_size):
-            numlen = len(f"{end_addr:X}")
-            chunk = ",".join(f"0x{x:02X}" for x in self.mem[i : min(i + chunk_size, end_addr + 1)])
-            self.logger.info(f"=MEMORY CONTENTS= 0x{i:0{numlen}X}-0x{i+chunk_size-1:0{numlen}X} [{chunk}]")
+            hexstart = str(Hex(i, self.addr_width))
+            hexend = str(Hex(i + chunk_size - 1, self.addr_width))
+            chunk = ",".join(str(Hex(x, 2)) for x in self.mem[i : min(i + chunk_size, end_addr + 1)])
+            self.logger.info(f"=MEMORY CONTENTS= {hexstart}-{hexend} [{chunk}]")

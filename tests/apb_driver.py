@@ -31,6 +31,7 @@ from typing import Literal
 
 from cocotb.handle import SimHandle
 from cocotb.triggers import RisingEdge
+from humannum import Hex
 
 
 class APBMasterDriver:
@@ -62,6 +63,7 @@ class APBMasterDriver:
         self.psel = psel
         self.pready = pready
         self.pslverr = pslverr
+        self.addr_width = len(paddr)
         self.data_width = len(pwdata)
         self.logger = getLogger(name)
         if log_level is not None:  # important explicit check for None as 0 would be a valid value
@@ -90,7 +92,9 @@ class APBMasterDriver:
         self.psel.value = 0
         err_resp = bool(self.pslverr.value)
         err = " ERROR" if err_resp else ""
-        self.logger.info(f"=MST WRIT{err}E= address: {hex(addr)} data: {data}")
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = str(Hex(data, self.data_width))
+        self.logger.info(f"=MST WRITE{err}= address: {hexaddr} data: {hexdata}")
         return err_resp
 
     async def read(self, addr: int) -> tuple[bool, int]:
@@ -109,7 +113,9 @@ class APBMasterDriver:
         rdata = self.prdata.value.integer
         err_resp = bool(self.pslverr.value)
         err = " ERROR" if err_resp else ""
-        self.logger.info(f"=MST READ{err}= address: {hex(addr)} data: {rdata}")
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = str(Hex(rdata, self.data_width))
+        self.logger.info(f"=MST READ{err}= address: {hexaddr} data: {hexdata}")
         return (err_resp, rdata)
 
     async def reset(self):
@@ -153,21 +159,27 @@ class APBSlaveDriver:
         self.pready = pready
         self.pslverr = pslverr
         self.err_addr = err_addr
+        self.addr_width = len(paddr)
+        self.data_width = len(pwdata)
         self.byte_width = len(pwdata) // 8
 
         self.logger = getLogger(name)
         if log_level is not None:  # important explicit check for None as 0 would be a valid value
             self.logger.setLevel(log_level)
 
-        self.mem = bytearray(size_bytes)  # Initialize a 1KB memory
+        self.mem = bytearray(size_bytes)  # Initialize memory
         self.pready_delay = pready_delay  # Delay for PREADY signal to simulate longer access times
         self.state = 0
 
     def _read(self, addr: int) -> int:
         """APB Read."""
-        rdata = int.from_bytes(self.mem[addr : addr + self.byte_width], "little")
+        bytes = self.mem[addr : addr + self.byte_width]
+        rdata = int.from_bytes(bytes, "little")
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = str(Hex(rdata, self.data_width))
+        hexbytes = ",".join(str(Hex(x, 2)) for x in bytes)
 
-        self.logger.info(f"=SLV READ= address: {hex(addr)} data: {hex(rdata)}")
+        self.logger.info(f"=SLV READ= address: {hexaddr} data: {hexdata} data (bytes): {hexbytes}")
         return rdata
 
     def _write(self, addr: int, data: int) -> None:
@@ -176,10 +188,10 @@ class APBSlaveDriver:
 
         wdata = data
         bytes = int.to_bytes(wdata, self.byte_width, "little")
-
-        self.logger.info(
-            f"=SLV WRITE= address: {hex(addr)} data: {hex(wdata)} data (bytes): {','.join([hex(x) for x in bytes])}"
-        )
+        hexaddr = str(Hex(addr, self.addr_width))
+        hexdata = str(Hex(wdata, self.data_width))
+        hexbytes = ",".join(str(Hex(x, 2)) for x in bytes)
+        self.logger.info(f"=SLV WRITE= address: {hexaddr} data: {hexdata} data (bytes): {hexbytes}")
         self.mem[addr : addr + self.byte_width] = bytes
 
     def _check_err_addr(self, paddr: int, pwrite: int) -> bool:
@@ -215,7 +227,8 @@ class APBSlaveDriver:
                 self.state = 0
             if self.state and self._check_err_addr(self.paddr.value, self.pwrite.value):
                 acc = "WRITE" if self.pwrite.value else "READ"
-                self.logger.info(f"=SLV ERROR RESP for {acc}= address: {hex(self.paddr.value)}")
+                hexaddr = str(Hex(self.paddr.value.integer, self.addr_width))
+                self.logger.info(f"=SLV ERROR RESP for {acc}= address: {hexaddr}")
                 self.pslverr.value = 1
                 self.state = 2
 
@@ -244,8 +257,7 @@ class APBSlaveDriver:
             )
             return
         for i in range(start_addr, end_addr + 1, chunk_size):
-            numlen = len(f"{end_addr:X}")
-            self.logger.info(
-                f"=MEMORY CONTENTS= 0x{i:0{numlen}X}-0x{i+chunk_size-1:0{numlen}X} "
-                f"[{','.join(f"0x{x:02X}" for x in self.mem[i : min(i + chunk_size, end_addr+1)])}]"
-            )
+            hexstart = str(Hex(i, self.addr_width))
+            hexend = str(Hex(i + chunk_size - 1, self.addr_width))
+            memcts = ",".join(str(Hex(x, 2)) for x in self.mem[i : min(i + chunk_size, end_addr + 1)])
+            self.logger.info(f"=MEMORY CONTENTS= {hexstart}-{hexend} [{memcts}]")

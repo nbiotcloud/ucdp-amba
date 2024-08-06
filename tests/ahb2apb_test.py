@@ -33,28 +33,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from tests.ahb_driver import AHBMasterDriver, BurstType
+from tests.ahb_driver import AHBMasterDriver, BurstType, SizeType
 from tests.apb_driver import APBSlaveDriver
-
-
-def _calc_wrmem(offs: int, blen: int, mmask: int, wdata: list[int]) -> bytearray:
-    """Calculate Reference Write Data in Bytes."""
-    memimg = bytearray(blen << 2)
-    for widx in range(blen):
-        midx = (offs + (widx << 2)) & mmask
-        memimg[midx : (midx + 4)] = int.to_bytes(wdata[widx], 4, "little")
-    return memimg
-
-
-def _calc_expected(offs: int, blen: int, mmask: int, mem: bytearray) -> list[int]:
-    """Calculate Expected Read Data."""
-    xdata = []
-    for widx in range(blen):
-        xd = 0
-        for bidx in range(4):
-            xd |= mem[(offs & ~mmask) + ((offs + (widx << 2) + bidx) & mmask)] << (bidx << 3)
-        xdata.append(xd)
-    return xdata
 
 
 # TODO put this is a generic tb lib
@@ -186,8 +166,8 @@ async def ahb2apb_test(dut):
 
         if random.randint(0, 1):
             wdata = [random.randint(1, 0xFFFFFFFF) for i in range(blen)]
-            mem[tgt][(offs & ~mmask) : (offs & ~mmask) + (blen << 2)] = _calc_wrmem(
-                offs=offs, blen=blen, mmask=mmask, wdata=wdata
+            mem[tgt][(offs & ~mmask) : (offs & ~mmask) + (blen << 2)] = ahb_mst.calc_wrmem(
+                offs=offs, size=SizeType.WORD, blen=blen, mmask=mmask, wdata=wdata
             )
             log.info(
                 f"=MST WRITE TRANSFER= target: {tgt}; offs:{hex(offs)}; burst:{btype.name}; "
@@ -196,7 +176,7 @@ async def ahb2apb_test(dut):
             err_resp = await ahb_mst.write(baseaddr[tgt] + offs, wdata, burst_type=btype)
             assert not err_resp, "Unexpected error response"
         else:
-            xdata = _calc_expected(offs=offs, blen=blen, mmask=mmask, mem=mem[tgt])
+            xdata = ahb_mst.calc_expected(offs=offs, size=SizeType.WORD, blen=blen, mmask=mmask, mem=mem[tgt])
             err_resp, rdata = await ahb_mst.read(baseaddr[tgt] + offs, burst_type=btype)
             assert not err_resp, "Unexpected error response"
             if tuple(rdata) == tuple(xdata):

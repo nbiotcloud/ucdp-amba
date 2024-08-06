@@ -36,26 +36,6 @@ from cocotb.triggers import Combine, RisingEdge
 from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 
 
-def _calc_wrmem(offs: int, size: SizeType, blen: int, mmask: int, wdata: list[int]) -> bytearray:
-    """Calculate Reference Write Data in Bytes."""
-    memimg = bytearray(blen << size)
-    for widx in range(blen):
-        midx = (offs + (widx << size)) & mmask
-        memimg[midx : (midx + (1 << size))] = int.to_bytes(wdata[widx], 1 << size, "little")
-    return memimg
-
-
-def _calc_expected(offs: int, size: SizeType, blen: int, mmask: int, mem: bytearray) -> list[int]:
-    """Calculate Expected Read Data."""
-    xdata = []
-    for widx in range(blen):
-        xd = 0
-        for bidx in range(1 << size):
-            xd |= mem[(offs & ~mmask) + ((offs + (widx << size) + bidx) & mmask)] << (bidx << 3)
-        xdata.append(xd)
-    return xdata
-
-
 # TODO put this is a generic tb lib
 async def wait_clocks(clock, cycles):
     """Helper Function."""
@@ -187,7 +167,7 @@ async def ahb_ml_test(dut):
         if random.randint(0, 1):
             wdata = [random.randint(1, smax) for i in range(blen)]
 
-            mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = _calc_wrmem(
+            mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = ext_mst.calc_wrmem(
                 offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata
             )
             log.info(
@@ -197,7 +177,7 @@ async def ahb_ml_test(dut):
             err_resp = await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
             assert not err_resp, "Unexpected error response"
         else:
-            xdata = _calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
+            xdata = ext_mst.calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
             err_resp, rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
             assert not err_resp, "Unexpected error response"
             if tuple(rdata) == tuple(xdata):
