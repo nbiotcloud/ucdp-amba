@@ -93,6 +93,7 @@ def test_generic(test):
         waves=waves,
         gui=gui,
         make_args=["PYTHON3=python3"],
+        plus_args=["--trace"],
     )
 
     # gui param above does nothing for verilator as the handling is a bit special, so we do it here
@@ -110,16 +111,16 @@ def test_generic(test):
             restore = str(restore_path)
         else:
             restore = ""
-        subprocess.check_call(
-            [
-                "gtkwave",
-                "-t",
-                f"{sim_build}/{top}.stems",
-                "-f",
-                f"{sim_build}/dump.fst",
-                "-a" if restore else "",
-                restore,
-                "-r",
-                ".gtkwaverc",
-            ]
-        )
+        cmd = [
+            "gtkwave",
+            "-t",
+            f"{sim_build}/{top}.stems",
+            "-f",
+            f"{sim_build}/dump.fst",
+            "-r",
+            ".gtkwaverc",
+        ]
+        if restore:
+            cmd.append("-a")
+            cmd.append(restore)
+        subprocess.check_call(cmd)
