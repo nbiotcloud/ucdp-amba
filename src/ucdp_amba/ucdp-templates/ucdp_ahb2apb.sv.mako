@@ -49,20 +49,27 @@ def decode_casez(decoding_slice: u.Slice, addrspace: SlaveAddrspace):
   paddr_slice = u.Slice(width=max(rng_bits))
 
   ff_dly = f"#{rslvr.ff_dly} " if rslvr.ff_dly else ""
+
+  use_hstrb = mod.proto.has_wstrb
+  use_pstrb = False
+  for slv in mod.slaves:
+    if slv.proto.has_wstrb:
+      use_pstrb = True
+      break
 %>
 ${parent.logic(indent=indent, skip=skip)}\
 
   // ------------------------------------------------------
-  // address decoding
+  // transfer decoding
   // ------------------------------------------------------
   always_comb begin: proc_xfer_dec_proc
+    ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     if ((ahb_slv_sel_s == 1'b1) &&
         ((ahb_slv_htrans_i == ahb_trans_nonseq_e) || (ahb_slv_htrans_i == ahb_trans_seq_e))) begin
       new_xfer_s = 1'b1;
     end else begin
       new_xfer_s = 1'b0;
     end
-    ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     valid_addr_s = 1'b0;
 % for aspc in mod.addrmap:
     apb_${aspc.name}_sel_s = 1'b0;
@@ -80,6 +87,47 @@ ${parent.logic(indent=indent, skip=skip)}\
         valid_addr_s = 1'b0;
       end
     endcase
+% if use_pstrb:
+
+%   if mod.datawidth == 32:
+    case (ahb_slv_hsize_i)
+      ahb_size_byte_e: begin
+        case (ahb_slv_haddr_i[1:0])
+          2'b11: begin
+            size_strb_s = 4'b1000;
+          end
+          2'b10: begin
+            size_strb_s = 4'b0100;
+          end
+          2'b01: begin
+            size_strb_s = 4'b0010;
+          end
+          default: begin
+            size_strb_s = 4'b0001;
+          end
+        endcase
+      end
+
+      ahb_size_halfword_e: begin
+        size_strb_s = (ahb_slv_haddr_i[0] == 1'b1) ? 4'b1100 : 4'b0011;
+      end
+
+      default: begin
+        size_strb_s = 4'b1111;
+      end
+    endcase
+%   elif mod.datawidth == 16:
+    case (ahb_slv_hsize_i)
+      ahb_size_byte_e: begin
+        size_strb_s = (ahb_slv_haddr_i[0] == 1'b1) ? 2'b10 : 2'b01;
+      end
+
+      default: begin
+        size_strb_s = 2'b11;
+      end
+    endcase
+%   endif
+% endif
   end
 
 <%
@@ -100,6 +148,13 @@ ${parent.logic(indent=indent, skip=skip)}\
     nosels = f"~({selgrps})"
   else:
     nosels = f"~{sels[0]}"
+
+  use_hauser = False
+  if mod.proto.ausertype is not None:
+    for slv in mod.slaves:
+      if mod.proto.ausertype == slv.proto.ausertype:
+        use_hauser = True
+        break
 %>
   // ------------------------------------------------------
   // slave input multiplexing
@@ -124,9 +179,15 @@ ${parent.logic(indent=indent, skip=skip)}\
 % if not mod.errirq:
       hresp_r <= ${ff_dly}apb_resp_okay_e;
 % endif
+% if use_hauser:
+      hauser_r <= ${ff_dly}${rslvr.get_default(mod.proto.ausertype)};
+% endif
       paddr_r <= ${ff_dly}${rslvr._get_uint_value(0, paddr_slice.width)};
       pwrite_r <= ${ff_dly}1'b0;
       pwdata_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth)};
+% if use_pstrb:
+      pstrb_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth//8)};
+% endif
       prdata_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth)};
       penable_r <= ${ff_dly}1'b0;
 % for aspc in mod.addrmap:
@@ -144,11 +205,17 @@ ${parent.logic(indent=indent, skip=skip)}\
           if (new_xfer_s == 1'b1) begin
             if (valid_addr_s == 1'b1) begin
               hready_r <= ${ff_dly}1'b0;
+% if use_hauser:
+              hauser_r <= ${ff_dly}ahb_slv_hauser_i;
+% endif
 % if not mod.errirq:
               hresp_r <= ${ff_dly}apb_resp_okay_e;
 % endif
               paddr_r <= ${ff_dly}ahb_slv_haddr_i[${paddr_slice}];
               pwrite_r <= ${ff_dly}ahb_slv_hwrite_i;
+% if use_pstrb:
+              pstrb_r <= ${ff_dly}(ahb_slv_hwrite_i == ahb_write_write_e) ? size_strb_s : ${rslvr._get_uint_value(0, mod.datawidth//8)};
+% endif
 % for aspc in mod.addrmap:
               apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
 % endfor
@@ -201,8 +268,14 @@ ${parent.logic(indent=indent, skip=skip)}\
 %   if mod.errirq:
                 hready_r <= ${ff_dly}1'b0;
 %   endif
+%   if use_hauser:
+                hauser_r <= ${ff_dly}ahb_slv_hauser_i;
+%   endif
                 paddr_r <= ${ff_dly}ahb_slv_haddr_i[${paddr_slice}];
                 pwrite_r <= ${ff_dly}ahb_slv_hwrite_i;
+%   if use_pstrb:
+                pstrb_r <= ${ff_dly}(ahb_slv_hwrite_i == ahb_write_write_e) ? size_strb_s : ${rslvr._get_uint_value(0, mod.datawidth//8)};
+%   endif
 %   for aspc in mod.addrmap:
                 apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
 %   endfor
@@ -213,7 +286,9 @@ ${parent.logic(indent=indent, skip=skip)}\
                 pwrite_r <= ${ff_dly}1'b0;
                 fsm_r <= ${ff_dly}fsm_idle_st;
 %   else:
-                ## hready_r <= ${ff_dly}1'b0;
+%   if use_pstrb:
+              pstrb_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth//8)};
+%   endif
 %   for aspc in mod.addrmap:
                 apb_${aspc.name}_sel_r <= ${ff_dly}1'b0;
 %   endfor
@@ -225,6 +300,9 @@ ${parent.logic(indent=indent, skip=skip)}\
               penable_r <= ${ff_dly}1'b0;
               hready_r <= ${ff_dly}1'b1;
               pwrite_r <= ${ff_dly}1'b0;
+%   if use_pstrb:
+              pstrb_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth//8)};
+%   endif
 %   for aspc in mod.addrmap:
               apb_${aspc.name}_sel_r <= ${ff_dly}1'b0;
 %   endfor
@@ -236,6 +314,9 @@ ${parent.logic(indent=indent, skip=skip)}\
             apb_${aspc.name}_sel_r <= ${ff_dly}1'b0;
 %   endfor
             pwrite_r <= ${ff_dly}1'b0;
+%   if use_pstrb:
+            pstrb_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth//8)};
+%   endif
 %   if mod.errirq:
             hready_r <= ${ff_dly}1'b1;
             pwrite_r <= ${ff_dly}1'b0;
@@ -268,8 +349,12 @@ ${parent.logic(indent=indent, skip=skip)}\
           hresp_r <= ${ff_dly}apb_resp_okay_e;
 % endif
           pwrite_r <= ${ff_dly}1'b0;
+% if use_pstrb:
+          pstrb_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth//8)};
+% endif
           pwdata_r <= ${ff_dly}${rslvr._get_uint_value(0, mod.datawidth)};
           penable_r <= ${ff_dly}1'b0;
+          paddr_r <= ${ff_dly}${rslvr._get_uint_value(0, paddr_slice.width)};
 % for aspc in mod.addrmap:
           apb_${aspc.name}_sel_r <= ${ff_dly}1'b0;
 % endfor
@@ -292,6 +377,15 @@ ${parent.logic(indent=indent, skip=skip)}\
     outp_asgn.add_row(f"apb_slv_{aspc.name}_pwdata_o", f"((pwrite_r & apb_{aspc.name}_sel_r)  == 1'b1) ? pwdata_s : {dzero};")
     outp_asgn.add_row(f"apb_slv_{aspc.name}_penable_o", f"penable_r & apb_{aspc.name}_sel_r;")
     outp_asgn.add_row(f"apb_slv_{aspc.name}_psel_o", f"apb_{aspc.name}_sel_r;")
+    slvprot = mod.slaves[aspc.name].proto
+    if slvprot.has_wstrb:
+      outp_asgn.add_row(f"apb_slv_{aspc.name}_pstrb_o", "pstrb_r;") ## TODO: and with hwstrb...
+    pauser = slvprot.ausertype
+    if pauser is not None:
+      if use_hauser:
+        outp_asgn.add_row(f"apb_slv_{aspc.name}_pauser_o", f"hauser_r;")
+      else:
+        outp_asgn.add_row(f"apb_slv_{aspc.name}_pauser_o", f"{rslvr.get_default(pauser)};")
 %>
   // ------------------------------------------------------
   // output Assignments

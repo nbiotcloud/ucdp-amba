@@ -30,12 +30,12 @@ import ucdp as u
 from test2ref import assert_refdata
 
 
-def test_ahb2apb(tmp_path):
+def test_ahb2apb(tmp_path, caplog):
     """AHB2APB Module."""
     top = u.load("ucdp_amba.ucdp_ahb2apb")
     with mock.patch.dict(os.environ, {"PRJROOT": str(tmp_path)}):
         u.generate(top.mod, "hdl")
-    assert_refdata(test_ahb2apb, tmp_path)
+    assert_refdata(test_ahb2apb, tmp_path, caplog=caplog)
 
 
 def test_ahb_ml(tmp_path):

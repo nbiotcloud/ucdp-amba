@@ -108,15 +108,6 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
     ahb_addrwidth: int = 32
     datawidth: int = 32
 
-    def _build(self):
-        self.add_port(u.ClkRstAnType(), "main_i")
-        if self.errirq:
-            title = "APB Error Interrupt"
-            self.add_port(LevelIrqType(), "irq_o", title=title, comment=title)
-        self.add_port(
-            t.AhbSlvType(proto=self.proto, addrwidth=self.ahb_addrwidth, datawidth=self.datawidth), "ahb_slv_i"
-        )
-
     def add_slave(
         self,
         name: str,
@@ -169,9 +160,49 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
                 raise ValueError(f"Slave {aspc.name!r} has non-contiguous address range.")
             slvchk.append(aspc.name)
 
+    def _check_hauser(self) -> bool:
+        use_hauser = False
+        ahbproto = self.proto
+        for slv in self.slaves:
+            apbproto = slv.proto
+            if ahbproto == apbproto:
+                use_hauser = use_hauser or (ahbproto.ausertype is not None)
+            elif (ahbproto.ausertype is not None) and (apbproto.ausertype is None):
+                LOGGER.warning(f"Bridge {self.name!r} slave {slv.name!r} has no APB 'pauser', ignoring AHB 'hauser'!")
+            elif (ahbproto.ausertype is None) and (apbproto.ausertype is not None):
+                LOGGER.warning(
+                    f"Bridge {self.name!r} slave {slv.name!r} is clamping APB 'pauser' since there is no AHB 'hauser'!"
+                )
+            elif ahbproto.ausertype != apbproto.ausertype:
+                LOGGER.error(f"Bridge {self.name!r} slave {slv.name!r} has differing AHB 'hauser' and APB 'pauser'!")
+            else:
+                use_hauser = True
+        return use_hauser
+
+    def _check_pstrb(self) -> bool:
+        use_pstrb = False
+        for slv in self.slaves:
+            apbproto = slv.proto
+            if (self.datawidth > 8) and (not apbproto.has_wstrb):  # noqa: PLR2004
+                LOGGER.warning(f"Bridge {self.name!r} slave {slv.name!r} can only support full-datawidth writes.")
+            use_pstrb = use_pstrb or apbproto.has_wstrb
+        return use_pstrb
+
+    def _build(self):
+        self.add_port(u.ClkRstAnType(), "main_i")
+        if self.errirq:
+            title = "APB Error Interrupt"
+            self.add_port(LevelIrqType(), "irq_o", title=title, comment=title)
+        self.add_port(
+            t.AhbSlvType(proto=self.proto, addrwidth=self.ahb_addrwidth, datawidth=self.datawidth), "ahb_slv_i"
+        )
+
     def _build_dep(self):
         self._check_slaves()
+        use_hauser = self._check_hauser()
         self.add_type_consts(t.AhbTransType())
+        self.add_type_consts(t.AhbSizeType())
+        self.add_type_consts(t.AhbWriteType())
         self.add_type_consts(t.ApbReadyType())
         self.add_type_consts(t.ApbRespType())
         self.add_type_consts(Ahb2ApbFsmType(), name="fsm", item_suffix="st")
@@ -180,6 +211,8 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         self.add_signal(u.BitType(), "ahb_slv_sel_s")
         self.add_signal(Ahb2ApbFsmType(), "fsm_r")
         self.add_signal(t.AhbReadyType(), "hready_r")
+        if use_hauser:
+            self.add_signal(self.proto.ausertype, "hauser_r")
         if self.optbw:
             self.add_signal(t.AhbReadyType(), "hready_s")
         if not self.errirq:
@@ -187,6 +220,9 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         rng_bits = [num.calc_unsigned_width(aspc.size - 1) for aspc in self.addrmap]
         self.add_signal(t.ApbAddrType(max(rng_bits)), "paddr_r")
         self.add_signal(t.ApbWriteType(), "pwrite_r")
+        if self._check_pstrb():
+            self.add_signal(t.ApbPstrbType(self.datawidth), "size_strb_s")
+            self.add_signal(t.ApbPstrbType(self.datawidth), "pstrb_r")
         self.add_signal(t.ApbDataType(self.datawidth), "pwdata_s")
         self.add_signal(t.ApbDataType(self.datawidth), "pwdata_r")
         self.add_signal(t.ApbDataType(self.datawidth), "prdata_s")
@@ -219,13 +255,19 @@ class UcdpAhb2apbExampleMod(u.AMod):
     """
 
     def _build(self):
-        class SecIdType(t.ASecIdType):
+        class MyUserType(t.ASecIdType):
+            """My AUser Type."""
+
+            title: str = "AHB User Type"
+            comment: str = "AHB User Type"
+
             def _build(self):
                 self._add(0, "apps")
                 self._add(2, "comm")
                 self._add(5, "audio")
 
-        amba5 = t.AmbaProto(name="amba5", secidtype=SecIdType(default=2))
+        amba5 = t.AmbaProto(name="amba5", ausertype=MyUserType(default=2))
+        apb5 = t.AmbaProto(name="ap5", ausertype=MyUserType(default=2), has_wstrb=True)
 
         for errirq in (False, True):
             for proto in (t.AMBA3, amba5):
@@ -235,8 +277,8 @@ class UcdpAhb2apbExampleMod(u.AMod):
                 ahb2apb.add_slave("slv3", proto=t.AMBA3)
                 ahb2apb.add_slave("slv5", proto=amba5)
 
-        ahb2apb = UcdpAhb2apbMod(self, "u_odd", ahb_addrwidth=27, errirq=False, optbw=True)
+        ahb2apb = UcdpAhb2apbMod(self, "u_odd", proto=amba5, ahb_addrwidth=27, errirq=False, optbw=True)
         ahb2apb.add_slave("foo")
-        ahb2apb.add_slave("bar", size="1KB")
+        ahb2apb.add_slave("bar", size="1KB", proto=apb5)
         ahb2apb.add_slave("baz", size="13kB")
         # slv.add_addrrange(size="3kB")

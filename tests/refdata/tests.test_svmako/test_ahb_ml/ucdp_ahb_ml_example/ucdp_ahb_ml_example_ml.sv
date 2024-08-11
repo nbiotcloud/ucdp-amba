@@ -152,6 +152,10 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   localparam logic   [2:0] ahb_size_halfword_e    = 3'h1;
   localparam logic   [2:0] ahb_size_word_e        = 3'h2;
   localparam logic   [2:0] ahb_size_doubleword_e  = 3'h3;
+  localparam logic   [2:0] ahb_size_fourword_e    = 3'h4;
+  localparam logic   [2:0] ahb_size_eightword_e   = 3'h5;
+  localparam logic   [2:0] ahb_size_sixteenword_e = 3'h6;
+  localparam logic   [2:0] ahb_size_kilobit_e     = 3'h7;
   localparam logic   [2:0] ahb_size_default_p     = 3'h0; // AHB Size
   // ahb_burst
   localparam integer       ahb_burst_width_p      = 3;
@@ -901,7 +905,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_slv_ram_hburst_o = ahb_burst_single_e;
         ahb_slv_ram_hsize_o  = ahb_size_word_e;
         ahb_slv_ram_htrans_o = ahb_trans_idle_e;
-        ahb_slv_ram_hprot_o  = 4'h0;
+        ahb_slv_ram_hprot_o  = 4'h3;
         ahb_slv_ram_hready_o = ahb_slv_ram_hreadyout_i;
       end
     endcase
@@ -940,7 +944,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       ahb_slv_periph_hburst_o = ahb_burst_single_e;
       ahb_slv_periph_hsize_o  = ahb_size_word_e;
       ahb_slv_periph_htrans_o = ahb_trans_idle_e;
-      ahb_slv_periph_hprot_o  = 4'h0;
+      ahb_slv_periph_hprot_o  = 4'h3;
       ahb_slv_periph_hready_o = ahb_slv_periph_hreadyout_i;
     end
 
@@ -970,7 +974,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       ahb_slv_misc_hburst_o = ahb_burst_single_e;
       ahb_slv_misc_hsize_o  = ahb_size_word_e;
       ahb_slv_misc_htrans_o = ahb_trans_idle_e;
-      ahb_slv_misc_hprot_o  = 4'h0;
+      ahb_slv_misc_hprot_o  = 4'h3;
       ahb_slv_misc_hready_o = ahb_slv_misc_hreadyout_i;
     end
 

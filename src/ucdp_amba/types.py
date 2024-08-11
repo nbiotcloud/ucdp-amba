@@ -37,8 +37,10 @@ Mainly these types are needed:
 
 import ucdp as u
 
+LEGAL_AHB_ADDR_WIDTH = range(10, 65)
 LEGAL_AHB_DATA_WIDTH = [8, 16, 32, 64, 128, 256, 512, 1024]
 LEGAL_AHB_PROT_WIDTH = [0, 4, 7]
+LEGAL_APB_ADDR_WIDTH = range(33)
 LEGAL_APB_DATA_WIDTH = [8, 16, 32]
 
 
@@ -53,18 +55,6 @@ class ASecIdType(u.AEnumType):
         """Return variant with element excluded."""
         excludes = u.split(excludes)
         return self.new(filter_=lambda item: item.value not in excludes)
-
-
-class AuserType(u.UintType):
-    """
-    Address User Channel (AMBA5 Lite).
-    """
-
-    title: str = "Address User Channel"
-    comment: str = "Address User Channel"
-
-    def __init__(self, **kwargs):
-        super().__init__(width=4, **kwargs)
 
 
 class AhbProtType(u.UintType):
@@ -90,14 +80,49 @@ class AhbProtType(u.UintType):
     def __init__(self, width=4, **kwargs):
         if width not in LEGAL_AHB_PROT_WIDTH:
             raise ValueError(f"Illegal value for AHB hprotwidth: {width}. Legal values are {LEGAL_AHB_PROT_WIDTH}")
+        super().__init__(width=width, default=3, **kwargs)
+
+
+class AhbHMastType(u.UintType):
+    """
+    AHB Master ID for Exclusive Transfers.
+    """
+
+    title: str = "AHB Master ID"
+    comment: str = "AHB Master ID"
+
+    def __init__(self, width=4, **kwargs):
         super().__init__(width=width, **kwargs)
 
 
 class AmbaProto(u.AConfig):
-    """Amba Protocol Version."""
+    """
+    Amba Protocol Version.
 
-    secidtype: ASecIdType | None = None
+    Specification of optional/conditional Protocol Features.
+
+    hprotwidth (int): Bitwidth for AHB hprot signal
+    has_hburst(bool): Determines whether AHB hburst signal exists (otherwise INCR only)
+    has_hmastlock (bool): Determines whether AHB hmastlock exists
+    has_hnonsec (bool): Determines whether AHB hnonsec signal exists
+    has_exclxfers (bool): Determines whether AHB signals for exclusive transfers exist (hexcl, hmaster, hexokay)
+    hmaster_width (int): Bitwidth for AHB hmaster signal (only valid when has_exclxfers is True)
+    has_wstrb (bool): Determines whether AHB hwstrb or APB pstrb write strobe signals exist
+    has_pprot (bool): Determines whether APB pprot signal exists
+    has_pnse (bool):  Determines whether APB uses Realm Management Extensions
+    ausertype (AEnumType|UintType): Type used for AHB hauser or APB pauser signal
+    """
+
     hprotwidth: int | None = 4
+    hmaster_width: int | None = 4
+    has_hburst: bool = True
+    has_hmastlock: bool = False
+    has_hnonsec: bool = False
+    has_exclxfers: bool = False
+    has_wstrb: bool = False
+    has_pprot: bool = False
+    has_pnse: bool = False
+    ausertype: u.AEnumType | u.UintType | None = None
 
     @property
     def hprottype(self) -> AhbProtType | None:
@@ -107,24 +132,11 @@ class AmbaProto(u.AConfig):
         return None
 
     @property
-    def ausertype(self) -> AuserType | None:
-        """Protocol has hauser signal."""
-        if self.secidtype:
-            return AuserType(default=self.calc_auser(secid=self.secidtype.default))
+    def hmaster_type(self) -> AhbHMastType | None:
+        """Protocol has HMASTER signal."""
+        if self.has_exclxfers and self.hmaster_width:
+            return AhbHMastType(width=self.hmaster_width)
         return None
-
-    def calc_auser(self, secname=None, secid=None):
-        """Calculate AUSER signal."""
-        value = 0
-        secidtype = self.secidtype
-        if self.secidtype:
-            if secname:
-                value = secidtype.encode(secname)
-            elif secid is not None:
-                value = secid
-            else:
-                value = secidtype.default
-        return value
 
 
 AMBA3 = AmbaProto(name="amba3")
@@ -145,7 +157,7 @@ class AhbMstType(u.AStructType):
     StructItem('hwrite', AhbWriteType(), doc=Doc(title='AHB Write Enable', ...))
     StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
     StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
-    StructItem('hprot', AhbProtType(4), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hprot', AhbProtType(4, default=3), doc=Doc(title='AHB Transfer Protection', ...))
     StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
     StructItem('hready', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done', ...))
     StructItem('hresp', AhbRespType(), orientation=BWD, doc=Doc(title='AHB Response Error', ...))
@@ -153,20 +165,21 @@ class AhbMstType(u.AStructType):
 
     With `hauser`:
 
-    >>> class SecIdType(ASecIdType):
+    >>> class AuserType(ASecIdType):
     ...     def _build(self):
     ...         self._add(0, "apps")
     ...         self._add(2, "comm")
     ...         self._add(5, "audio")
-    >>> ahb5 = AmbaProto("AHB5", secidtype=SecIdType(default=2))
+    >>> ahb5 = AmbaProto("AHB5", ausertype=AuserType(default=2))
 
     >>> for item in AhbMstType(proto=ahb5).values(): item
     StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
     StructItem('haddr', AhbAddrType(32), doc=Doc(title='AHB Bus Address', ...))
+    StructItem('hauser', AuserType(default=2), doc=Doc(title='AHB Address User Channel', ...))
     StructItem('hwrite', AhbWriteType(), doc=Doc(title='AHB Write Enable', ...))
     StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
     StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
-    StructItem('hprot', AhbProtType(4), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hprot', AhbProtType(4, default=3), doc=Doc(title='AHB Transfer Protection', ...))
     StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
     StructItem('hready', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done', ...))
     StructItem('hresp', AhbRespType(), orientation=BWD, doc=Doc(title='AHB Response Error', ...))
@@ -233,16 +246,31 @@ class AhbMstType(u.AStructType):
         self._add("htrans", AhbTransType())
         self._add("haddr", AhbAddrType(self.addrwidth))
         if ausertype := self.proto.ausertype:
-            self._add("hauser", ausertype, title="AHB Address User Channel")
+            auserdoc = "AHB Address User Channel"
+            self._add("hauser", ausertype, title=auserdoc, comment=auserdoc)
         self._add("hwrite", AhbWriteType())
         self._add("hsize", AhbSizeType())
-        self._add("hburst", AhbBurstType())
+        if self.proto.has_hburst:
+            self._add("hburst", AhbBurstType())
         if hprottype := self.proto.hprottype:
             self._add("hprot", hprottype)
+        if self.proto.has_hnonsec:
+            self._add("hnonsec", AhbNonsecType())
+        if self.proto.has_hmastlock:
+            self._add("hmastlock", AhbMastlockType())
         self._add("hwdata", AhbDataType(self.datawidth))
+        if self.proto.has_wstrb:
+            self._add("hwstrb", AhbStrbType(width=self.datawidth // 8))
+        if self.proto.has_exclxfers:
+            self._add("hexcl", AhbExclType())
+        if hmasttype := self.proto.hmaster_type:
+            self._add("hmaster", hmasttype)
         # BWD
         self._add("hready", AhbReadyType(), u.BWD)
         self._add("hresp", AhbRespType(), u.BWD)
+        if self.proto.has_exclxfers:
+            hexokdoc = "AHB Exclusive Transfer Response"
+            self._add("hexokay", AhbRespType(), u.BWD, title=hexokdoc, comment=hexokdoc)
         self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
 
     def cast(self, other):
@@ -303,7 +331,7 @@ class AhbSlvType(u.AStructType):
     StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
     StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
     StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
-    StructItem('hprot', AhbProtType(4), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hprot', AhbProtType(4, default=3), doc=Doc(title='AHB Transfer Protection', ...))
     StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
     StructItem('hready', AhbReadyType(), doc=Doc(title='AHB Transfer Done to Slave', ...))
     StructItem('hreadyout', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done from Slave', ...))
@@ -312,21 +340,22 @@ class AhbSlvType(u.AStructType):
 
     With `hauser`:
 
-    >>> class SecIdType(ASecIdType):
+    >>> class AuserType(ASecIdType):
     ...     def _build(self):
     ...         self._add(0, "apps")
     ...         self._add(2, "comm")
     ...         self._add(5, "audio")
-    >>> ahb5 = AmbaProto("AHB5", secidtype=SecIdType(default=2))
+    >>> ahb5 = AmbaProto("AHB5", ausertype=AuserType(default=2))
 
     >>> for item in AhbSlvType(proto=ahb5).values(): item
     StructItem('hsel', AhbSelType(), doc=Doc(title='AHB Slave Select', ...))
     StructItem('haddr', AhbAddrType(32), doc=Doc(title='AHB Bus Address', ...))
+    StructItem('hauser', AuserType(default=2), doc=Doc(title='AHB Address User Channel', ...))
     StructItem('hwrite', AhbWriteType(), doc=Doc(title='AHB Write Enable', ...))
     StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
     StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
     StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
-    StructItem('hprot', AhbProtType(4), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hprot', AhbProtType(4, default=3), doc=Doc(title='AHB Transfer Protection', ...))
     StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
     StructItem('hready', AhbReadyType(), doc=Doc(title='AHB Transfer Done to Slave', ...))
     StructItem('hreadyout', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done from Slave', ...))
@@ -371,7 +400,7 @@ class AhbSlvType(u.AStructType):
 
     With wider HPROT:
 
-    >>> ahbp = AmbaProto("AHB3", hprotwidth=7)
+    >>> ahbp = AmbaProto("AHB5", hprotwidth=7)
 
     >>> for item in AhbSlvType(proto=ahbp).values(): item
     StructItem('hsel', AhbSelType(), doc=Doc(title='AHB Slave Select', ...))
@@ -380,7 +409,7 @@ class AhbSlvType(u.AStructType):
     StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
     StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
     StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
-    StructItem('hprot', AhbProtType(7), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hprot', AhbProtType(7, default=3), doc=Doc(title='AHB Transfer Protection', ...))
     StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
     StructItem('hready', AhbReadyType(), doc=Doc(title='AHB Transfer Done to Slave', ...))
     StructItem('hreadyout', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done from Slave', ...))
@@ -399,21 +428,36 @@ class AhbSlvType(u.AStructType):
         # FWD
         self._add("hsel", AhbSelType())
         self._add("haddr", AhbAddrType(self.addrwidth))
-        if self.proto.ausertype:
-            self._add("hauser", self.proto.ausertype, title="AHB Address User Channel")
+        if ausertype := self.proto.ausertype:
+            auserdoc = "AHB Address User Channel"
+            self._add("hauser", ausertype, title=auserdoc, comment=auserdoc)
         self._add("hwrite", AhbWriteType())
         self._add("htrans", AhbTransType())
         self._add("hsize", AhbSizeType())
-        self._add("hburst", AhbBurstType())
+        if self.proto.has_hburst:
+            self._add("hburst", AhbBurstType())
         if self.proto.hprottype:
             self._add("hprot", self.proto.hprottype)
+        if self.proto.has_hnonsec:
+            self._add("hnonsec", AhbNonsecType())
+        if self.proto.has_hmastlock:
+            self._add("hmastlock", AhbMastlockType())
         self._add("hwdata", AhbDataType(self.datawidth))
+        if self.proto.has_wstrb:
+            self._add("hwstrb", AhbStrbType(width=self.datawidth // 8))
         title: str = "AHB Transfer Done to Slave"
         self._add("hready", AhbReadyType(), title=title, comment=title)
+        if self.proto.has_exclxfers:
+            self._add("hexcl", AhbExclType())
+        if hmasttype := self.proto.hmaster_type:
+            self._add("hmaster", hmasttype)
         # BWD
         title: str = "AHB Transfer Done from Slave"
         self._add("hreadyout", AhbReadyType(), u.BWD, title=title, comment=title)
         self._add("hresp", AhbRespType(), u.BWD)
+        if self.proto.has_exclxfers:
+            hexokdoc = "AHB Exclusive Transfer Response"
+            self._add("hexokay", AhbRespType(), u.BWD, title=hexokdoc, comment=hexokdoc)
         self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
 
     def cast(self, other):
@@ -461,107 +505,6 @@ class AhbSlvType(u.AStructType):
             return None
 
 
-class ApbSlvType(u.AStructType):
-    """
-    To APB Slave.
-
-    Keyword Args:
-        proto (Protocol): Protocol feature set selection.
-
-    The default type:
-
-    >>> for item in ApbSlvType().values(): item
-    StructItem('paddr', ApbAddrType(12), doc=Doc(title='APB Bus Address', ...))
-    StructItem('pwrite', ApbWriteType(), doc=Doc(title='APB Write Enable', ...))
-    StructItem('pwdata', ApbDataType(32), doc=Doc(title='APB Data', ...))
-    StructItem('penable', ApbEnaType(), doc=Doc(title='APB Transfer Enable', ...))
-    StructItem('psel', ApbSelType(), doc=Doc(title='APB Slave Select', ...))
-    StructItem('prdata', ApbDataType(32), orientation=BWD, doc=Doc(title='APB Data', ...))
-    StructItem('pslverr', ApbRespType(), orientation=BWD, doc=Doc(title='APB Response Error', ...))
-    StructItem('pready', ApbReadyType(), orientation=BWD, doc=Doc(title='APB Transfer Done', ...))
-
-    With `pauser`:
-
-    >>> class SecIdType(ASecIdType):
-    ...     def _build(self):
-    ...         self._add(0, "apps")
-    ...         self._add(2, "comm")
-    ...         self._add(5, "audio")
-    >>> apb5 = AmbaProto("APB5", secidtype=SecIdType(default=2))
-
-    >>> for item in ApbSlvType(proto=apb5).values(): item
-    StructItem('paddr', ApbAddrType(12), doc=Doc(title='APB Bus Address', ...))
-    StructItem('pauser', AuserType(4, default=2), doc=Doc(title='APB Address User Channel', ...))
-    StructItem('pwrite', ApbWriteType(), doc=Doc(title='APB Write Enable', ...))
-    StructItem('pwdata', ApbDataType(32), doc=Doc(title='APB Data', ...))
-    StructItem('penable', ApbEnaType(), doc=Doc(title='APB Transfer Enable', ...))
-    StructItem('psel', ApbSelType(), doc=Doc(title='APB Slave Select', ...))
-    StructItem('prdata', ApbDataType(32), orientation=BWD, doc=Doc(title='APB Data', ...))
-    StructItem('pslverr', ApbRespType(), orientation=BWD, doc=Doc(title='APB Response Error', ...))
-    StructItem('pready', ApbReadyType(), orientation=BWD, doc=Doc(title='APB Transfer Done', ...))
-
-    Both protocol versions are not connectable:
-
-    >>> ApbSlvType().is_connectable(ApbSlvType(proto=apb5))
-    False
-
-    But casting is allowed:
-
-    >>> for item in ApbSlvType().cast(ApbSlvType(proto=apb5)): item
-    ('', '')
-    ('paddr', 'paddr')
-    ('pwrite', 'pwrite')
-    ('pwdata', 'pwdata')
-    ('penable', 'penable')
-    ('psel', 'psel')
-    ('prdata', 'prdata')
-    ('pslverr', 'pslverr')
-    ('pready', 'pready')
-    """
-
-    title: str = "APB Slave"
-    comment: str = "APB Slave"
-    proto: AmbaProto = AMBA3
-    addrwidth: int = 12
-    datawidth: int = 32
-
-    def _build(self):
-        # FWD
-        self._add("paddr", ApbAddrType(self.addrwidth))
-        if self.proto.ausertype:
-            self._add("pauser", self.proto.ausertype, title="APB Address User Channel")
-        self._add("pwrite", ApbWriteType())
-        self._add("pwdata", ApbDataType(self.datawidth))
-        self._add("penable", ApbEnaType())
-        self._add("psel", ApbSelType())
-        # BWD
-        self._add("prdata", ApbDataType(self.datawidth), u.BWD)
-        self._add("pslverr", ApbRespType(), u.BWD)
-        self._add("pready", ApbReadyType(), u.BWD)
-
-    def cast(self, other):
-        """
-        How to cast an assign of type `self` from a value of type `other`.
-
-        `self = cast(other)`
-        """
-        if isinstance(other, ApbSlvType) and self.proto != other.proto:
-            # Drive a Slv with Slv signals
-            yield "", ""
-            yield "paddr", "paddr"
-            # never use pauser
-            yield "pwrite", "pwrite"
-            yield "pwdata", "pwdata"
-            yield "penable", "penable"
-            yield "psel", "psel"
-            # BWD
-            yield "prdata", "prdata"
-            yield "pslverr", "pslverr"
-            yield "pready", "pready"
-        else:
-            return None
-
-
 class AhbSelType(u.BitType):
     """AHB Select."""
 
@@ -577,42 +520,23 @@ class AhbAddrType(u.UintType):
     32
     >>> AhbAddrType(width=16).width
     16
+
+    Checked for valid width:
+    >>> t = AhbAddrType(width=9)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for AHB addrwidth: 9.Legal values are between 10 and 64.
     """
 
     title: str = "AHB Bus Address"
     comment: str = "AHB Bus Address"
 
     def __init__(self, width=32, **kwargs):
-        super().__init__(width=width, **kwargs)
-
-
-class AhbWordAddrType(u.UintType):
-    """
-    AHB Word Address.
-
-    >>> AhbWordAddrType().width
-    30
-    """
-
-    title: str = "AHB Word Address"
-    comment: str = "AHB Word Address"
-
-    def __init__(self, width=30, **kwargs):
-        super().__init__(width=width, **kwargs)
-
-
-class AhbHalfWordAddrType(u.UintType):
-    """
-    AHB Half Word Address.
-
-    >>> AhbHalfWordAddrType().width
-    31
-    """
-
-    title: str = "AHB Half Word Address"
-    comment: str = "AHB Half Word Address"
-
-    def __init__(self, width=31, **kwargs):
+        if width not in LEGAL_AHB_ADDR_WIDTH:
+            raise ValueError(
+                f"Illegal value for AHB addrwidth: {width}."
+                f"Legal values are between {LEGAL_AHB_ADDR_WIDTH[0]} and {LEGAL_AHB_ADDR_WIDTH[-1]}."
+            )
         super().__init__(width=width, **kwargs)
 
 
@@ -673,6 +597,7 @@ class AhbSizeType(u.AEnumType):
     EnumItem(1, 'halfword', doc=Doc(title='Halfword', descr='16 bits'))
     EnumItem(2, 'word', doc=Doc(title='Word', descr='32 bits'))
     EnumItem(3, 'doubleword', doc=Doc(title='Doubleword', descr='64 bits'))
+    ...
     """
 
     keytype: u.UintType = u.UintType(3)
@@ -684,6 +609,10 @@ class AhbSizeType(u.AEnumType):
         self._add(1, "halfword", "Halfword", descr="16 bits")
         self._add(2, "word", "Word", descr="32 bits")
         self._add(3, "doubleword", "Doubleword", descr="64 bits")
+        self._add(4, "fourword", "4-word", descr="128 bits")
+        self._add(5, "eightword", "8-word", descr="256 bits")
+        self._add(6, "sixteenword", "16-word", descr="512 bits")
+        self._add(7, "kilobit", "32-word", descr="1024 bits")
 
 
 class AhbBurstType(u.AEnumType):
@@ -734,6 +663,49 @@ class AhbWriteType(u.AEnumType):
         self._add(1, "write", "Write operation")
 
 
+class AhbStrbType(u.UintType):
+    """
+    AHB Write Strobe.
+
+    >>> AhbStrbType().width
+    4
+    """
+
+    title: str = "AHB Write Strobe"
+    comment: str = "AHB Write Strobe"
+
+    def __init__(self, width=4, **kwargs):
+        super().__init__(width=width, **kwargs)
+
+
+class AhbNonsecType(u.AEnumType):
+    """
+    AHB Secure Transfer Type.
+    """
+
+    keytype: u.BitType = u.BitType()
+    title: str = "AHB Secure Transfer"
+    comment: str = "AHB Secure Transfer"
+
+    def _build(self):
+        self._add(0, "sec", "Secure Transfer")
+        self._add(1, "nonsec", "Nonsecure Transfer")
+
+
+class AhbMastlockType(u.AEnumType):
+    """
+    AHB Master Lock Type.
+    """
+
+    keytype: u.BitType = u.BitType()
+    title: str = "AHB Locked Sequence Enable"
+    comment: str = "AHB Locked Sequence Enable"
+
+    def _build(self):
+        self._add(0, "norm", "Normal sequence")
+        self._add(1, "locked", "Locked sequence")
+
+
 class AhbRespType(u.AEnumType):
     """
     AHB Response Type.
@@ -770,6 +742,129 @@ class AhbReadyType(u.AEnumType):
         self._add(1, "done", "Done")
 
 
+class AhbExclType(u.EnumItem):
+    """
+    AHB Exclusive Transfer Type.
+    """
+
+    keytype: u.BitType = u.BitType(default=1)
+    title: str = "AHB Exclusive Transfer"
+    comment: str = "AHB Exclusive Transfer"
+
+    def _build(self):
+        self._add(0, "norm", "Normal")
+        self._add(1, "excl", "Exclusive")
+
+
+################################################################################################
+##   APB PRotocol Related
+################################################################################################
+
+
+class ApbSlvType(u.AStructType):
+    """
+    To APB Slave.
+
+    Keyword Args:
+        proto (Protocol): Protocol feature set selection.
+
+    The default type:
+
+    >>> for item in ApbSlvType().values(): item
+    StructItem('paddr', ApbAddrType(12), doc=Doc(title='APB Bus Address', ...))
+    StructItem('pwrite', ApbWriteType(), doc=Doc(title='APB Write Enable', ...))
+    StructItem('pwdata', ApbDataType(32), doc=Doc(title='APB Data', ...))
+    StructItem('penable', ApbEnaType(), doc=Doc(title='APB Transfer Enable', ...))
+    StructItem('psel', ApbSelType(), doc=Doc(title='APB Slave Select', ...))
+    StructItem('prdata', ApbDataType(32), orientation=BWD, doc=Doc(title='APB Data', ...))
+    StructItem('pslverr', ApbRespType(), orientation=BWD, doc=Doc(title='APB Response Error', ...))
+    StructItem('pready', ApbReadyType(), orientation=BWD, doc=Doc(title='APB Transfer Done', ...))
+
+    With `pauser`:
+
+    >>> class AuserType(ASecIdType):
+    ...     def _build(self):
+    ...         self._add(0, "apps")
+    ...         self._add(2, "comm")
+    ...         self._add(5, "audio")
+    >>> apb5 = AmbaProto("APB5", ausertype=AuserType(default=2))
+
+    >>> for item in ApbSlvType(proto=apb5).values(): item
+    StructItem('paddr', ApbAddrType(12), doc=Doc(title='APB Bus Address', ...))
+    StructItem('pauser', AuserType(default=2), doc=Doc(title='APB Address User Channel', ...))
+    StructItem('pwrite', ApbWriteType(), doc=Doc(title='APB Write Enable', ...))
+    StructItem('pwdata', ApbDataType(32), doc=Doc(title='APB Data', ...))
+    StructItem('penable', ApbEnaType(), doc=Doc(title='APB Transfer Enable', ...))
+    StructItem('psel', ApbSelType(), doc=Doc(title='APB Slave Select', ...))
+    StructItem('prdata', ApbDataType(32), orientation=BWD, doc=Doc(title='APB Data', ...))
+    StructItem('pslverr', ApbRespType(), orientation=BWD, doc=Doc(title='APB Response Error', ...))
+    StructItem('pready', ApbReadyType(), orientation=BWD, doc=Doc(title='APB Transfer Done', ...))
+
+    Both protocol versions are not connectable:
+
+    >>> ApbSlvType().is_connectable(ApbSlvType(proto=apb5))
+    False
+
+    But casting is allowed:
+
+    >>> for item in ApbSlvType().cast(ApbSlvType(proto=apb5)): item
+    ('', '')
+    ('paddr', 'paddr')
+    ('pwrite', 'pwrite')
+    ('pwdata', 'pwdata')
+    ('penable', 'penable')
+    ('psel', 'psel')
+    ('prdata', 'prdata')
+    ('pslverr', 'pslverr')
+    ('pready', 'pready')
+    """
+
+    title: str = "APB Slave"
+    comment: str = "APB Slave"
+    proto: AmbaProto = AMBA3
+    addrwidth: int = 12
+    datawidth: int = 32
+
+    def _build(self):
+        # FWD
+        self._add("paddr", ApbAddrType(self.addrwidth))
+        if self.proto.ausertype:
+            auserdoc = "APB Address User Channel"
+            self._add("pauser", self.proto.ausertype, title=auserdoc, comment=auserdoc)
+        self._add("pwrite", ApbWriteType())
+        self._add("pwdata", ApbDataType(self.datawidth))
+        if self.proto.has_wstrb:
+            self._add("pstrb", ApbStrbType(width=self.datawidth // 8))
+        self._add("penable", ApbEnaType())
+        self._add("psel", ApbSelType())
+        # BWD
+        self._add("prdata", ApbDataType(self.datawidth), u.BWD)
+        self._add("pslverr", ApbRespType(), u.BWD)
+        self._add("pready", ApbReadyType(), u.BWD)
+
+    def cast(self, other):
+        """
+        How to cast an assign of type `self` from a value of type `other`.
+
+        `self = cast(other)`
+        """
+        if isinstance(other, ApbSlvType) and self.proto != other.proto:
+            # Drive a Slv with Slv signals
+            yield "", ""
+            yield "paddr", "paddr"
+            # never use pauser
+            yield "pwrite", "pwrite"
+            yield "pwdata", "pwdata"
+            yield "penable", "penable"
+            yield "psel", "psel"
+            # BWD
+            yield "prdata", "prdata"
+            yield "pslverr", "pslverr"
+            yield "pready", "pready"
+        else:
+            return None
+
+
 class ApbSelType(u.BitType):
     """APB Select."""
 
@@ -792,12 +887,23 @@ class ApbAddrType(u.UintType):
     32
     >>> ApbAddrType(width=16).width
     16
+
+    Checked for valid width:
+    >>> t = ApbAddrType(width=34)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for APB addrwidth: 34.Legal values are between 0 and 32.
     """
 
     title: str = "APB Bus Address"
     comment: str = "APB Bus Address"
 
     def __init__(self, width=32, **kwargs):
+        if width not in LEGAL_APB_ADDR_WIDTH:
+            raise ValueError(
+                f"Illegal value for APB addrwidth: {width}."
+                f"Legal values are between {LEGAL_APB_ADDR_WIDTH[0]} and {LEGAL_APB_ADDR_WIDTH[-1]}."
+            )
         super().__init__(width=width, **kwargs)
 
 
@@ -827,6 +933,38 @@ class ApbDataType(u.UintType):
         super().__init__(width=width, **kwargs)
 
 
+class ApbPstrbType(u.UintType):
+    """
+    APB Write Strobe.
+    """
+
+    title: str = "APB Write Strobe"
+    comment: str = "APB Write Strobe"
+
+    def __init__(self, datawidth=32, **kwargs):
+        if datawidth not in LEGAL_APB_DATA_WIDTH:
+            raise ValueError(f"Illegal value for APB datawidth: {datawidth}. Legal values are {LEGAL_APB_DATA_WIDTH}")
+        super().__init__(width=datawidth // 8, **kwargs)
+
+
+class ApbProtType(u.UintType):
+    """
+    APB Protection Type.
+
+    >>> ApbProtType().width
+    3
+
+    >>> ApbProtType().default
+    0
+    """
+
+    title: str = "APB Protection Type"
+    comment: str = "APB Protection Type"
+
+    def __init__(self):
+        super().__init__(width=3, default=0)
+
+
 class ApbWriteType(u.AEnumType):
     """
     AHB Write Type.
@@ -843,6 +981,21 @@ class ApbWriteType(u.AEnumType):
     def _build(self):
         self._add(0, "read", "Read operation")
         self._add(1, "write", "Write operation")
+
+
+class ApbStrbType(u.UintType):
+    """
+    APB Write Strobe.
+
+    >>> ApbStrbType().width
+    4
+    """
+
+    title: str = "APB Write Strobe"
+    comment: str = "APB Write Strobe"
+
+    def __init__(self, width=4, **kwargs):
+        super().__init__(width=width, **kwargs)
 
 
 class ApbRespType(u.AEnumType):
@@ -881,19 +1034,19 @@ class ApbReadyType(u.AEnumType):
         self._add(1, "done", "Done")
 
 
-class IdleType(u.AEnumType):
-    """
-    Bus Idle Type.
+# class IdleType(u.AEnumType):
+#     """
+#     Bus Idle Type.
 
-    >>> for item in IdleType().values(): item
-    EnumItem(0, 'busy', doc=Doc(title='Busy', comment='Transfers Ongoing'))
-    EnumItem(1, 'idle', doc=Doc(title='Idle'))
-    """
+#     >>> for item in IdleType().values(): item
+#     EnumItem(0, 'busy', doc=Doc(title='Busy', comment='Transfers Ongoing'))
+#     EnumItem(1, 'idle', doc=Doc(title='Idle'))
+#     """
 
-    keytype: u.BitType = u.BitType(default=1)
-    title: str = "Bus Idle"
-    comment: str = "Bus Idle"
+#     keytype: u.BitType = u.BitType(default=1)
+#     title: str = "Bus Idle"
+#     comment: str = "Bus Idle"
 
-    def _build(self):
-        self._add(0, "busy", "Busy", comment="Transfers Ongoing")
-        self._add(1, "idle", "Idle")
+#     def _build(self):
+#         self._add(0, "busy", "Busy", comment="Transfers Ongoing")
+#         self._add(1, "idle", "Idle")

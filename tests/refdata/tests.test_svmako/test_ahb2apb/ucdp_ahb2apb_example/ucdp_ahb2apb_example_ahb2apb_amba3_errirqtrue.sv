@@ -83,7 +83,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   input  logic        apb_slv_slv3_pready_i,     // APB Transfer Done
   // apb_slv_slv5_o: APB Slave 'slv5'
   output logic [11:0] apb_slv_slv5_paddr_o,      // APB Bus Address
-  output logic [3:0]  apb_slv_slv5_pauser_o,     // Address User Channel
+  output logic [3:0]  apb_slv_slv5_pauser_o,     // APB Address User Channel
   output logic        apb_slv_slv5_pwrite_o,     // APB Write Enable
   output logic [31:0] apb_slv_slv5_pwdata_o,     // APB Data
   output logic        apb_slv_slv5_penable_o,    // APB Transfer Enable
@@ -100,37 +100,57 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   //  Local Parameter
   // ------------------------------------------------------
   // ahb_trans
-  localparam integer       ahb_trans_width_p   = 2;
-  localparam logic   [1:0] ahb_trans_min_p     = 2'h0; // AHB Transfer Type
-  localparam logic   [1:0] ahb_trans_max_p     = 2'h3; // AHB Transfer Type
-  localparam logic   [1:0] ahb_trans_idle_e    = 2'h0;
-  localparam logic   [1:0] ahb_trans_busy_e    = 2'h1;
-  localparam logic   [1:0] ahb_trans_nonseq_e  = 2'h2;
-  localparam logic   [1:0] ahb_trans_seq_e     = 2'h3;
-  localparam logic   [1:0] ahb_trans_default_p = 2'h0; // AHB Transfer Type
+  localparam integer       ahb_trans_width_p      = 2;
+  localparam logic   [1:0] ahb_trans_min_p        = 2'h0; // AHB Transfer Type
+  localparam logic   [1:0] ahb_trans_max_p        = 2'h3; // AHB Transfer Type
+  localparam logic   [1:0] ahb_trans_idle_e       = 2'h0;
+  localparam logic   [1:0] ahb_trans_busy_e       = 2'h1;
+  localparam logic   [1:0] ahb_trans_nonseq_e     = 2'h2;
+  localparam logic   [1:0] ahb_trans_seq_e        = 2'h3;
+  localparam logic   [1:0] ahb_trans_default_p    = 2'h0; // AHB Transfer Type
+  // ahb_size
+  localparam integer       ahb_size_width_p       = 3;
+  localparam logic   [2:0] ahb_size_min_p         = 3'h0; // AHB Size
+  localparam logic   [2:0] ahb_size_max_p         = 3'h7; // AHB Size
+  localparam logic   [2:0] ahb_size_byte_e        = 3'h0;
+  localparam logic   [2:0] ahb_size_halfword_e    = 3'h1;
+  localparam logic   [2:0] ahb_size_word_e        = 3'h2;
+  localparam logic   [2:0] ahb_size_doubleword_e  = 3'h3;
+  localparam logic   [2:0] ahb_size_fourword_e    = 3'h4;
+  localparam logic   [2:0] ahb_size_eightword_e   = 3'h5;
+  localparam logic   [2:0] ahb_size_sixteenword_e = 3'h6;
+  localparam logic   [2:0] ahb_size_kilobit_e     = 3'h7;
+  localparam logic   [2:0] ahb_size_default_p     = 3'h0; // AHB Size
+  // ahb_write
+  localparam integer       ahb_write_width_p      = 1;
+  localparam logic         ahb_write_min_p        = 1'b0; // AHB Write Enable
+  localparam logic         ahb_write_max_p        = 1'b1; // AHB Write Enable
+  localparam logic         ahb_write_read_e       = 1'b0;
+  localparam logic         ahb_write_write_e      = 1'b1;
+  localparam logic         ahb_write_default_p    = 1'b0; // AHB Write Enable
   // apb_ready
-  localparam integer       apb_ready_width_p   = 1;
-  localparam logic         apb_ready_min_p     = 1'b0; // APB Transfer Done
-  localparam logic         apb_ready_max_p     = 1'b1; // APB Transfer Done
-  localparam logic         apb_ready_busy_e    = 1'b0;
-  localparam logic         apb_ready_done_e    = 1'b1;
-  localparam logic         apb_ready_default_p = 1'b1; // APB Transfer Done
+  localparam integer       apb_ready_width_p      = 1;
+  localparam logic         apb_ready_min_p        = 1'b0; // APB Transfer Done
+  localparam logic         apb_ready_max_p        = 1'b1; // APB Transfer Done
+  localparam logic         apb_ready_busy_e       = 1'b0;
+  localparam logic         apb_ready_done_e       = 1'b1;
+  localparam logic         apb_ready_default_p    = 1'b1; // APB Transfer Done
   // apb_resp
-  localparam integer       apb_resp_width_p    = 1;
-  localparam logic         apb_resp_min_p      = 1'b0; // APB Response Error
-  localparam logic         apb_resp_max_p      = 1'b1; // APB Response Error
-  localparam logic         apb_resp_okay_e     = 1'b0;
-  localparam logic         apb_resp_error_e    = 1'b1;
-  localparam logic         apb_resp_default_p  = 1'b0; // APB Response Error
+  localparam integer       apb_resp_width_p       = 1;
+  localparam logic         apb_resp_min_p         = 1'b0; // APB Response Error
+  localparam logic         apb_resp_max_p         = 1'b1; // APB Response Error
+  localparam logic         apb_resp_okay_e        = 1'b0;
+  localparam logic         apb_resp_error_e       = 1'b1;
+  localparam logic         apb_resp_default_p     = 1'b0; // APB Response Error
   // fsm
-  localparam integer       fsm_width_p         = 2;
-  localparam logic   [1:0] fsm_min_p           = 2'h0; // AHB to APB FSM Type
-  localparam logic   [1:0] fsm_max_p           = 2'h3; // AHB to APB FSM Type
-  localparam logic   [1:0] fsm_idle_st         = 2'h0;
-  localparam logic   [1:0] fsm_apb_ctrl_st     = 2'h1;
-  localparam logic   [1:0] fsm_apb_data_st     = 2'h2;
-  localparam logic   [1:0] fsm_ahb_err_st      = 2'h3;
-  localparam logic   [1:0] fsm_default_p       = 2'h0; // AHB to APB FSM Type
+  localparam integer       fsm_width_p            = 2;
+  localparam logic   [1:0] fsm_min_p              = 2'h0; // AHB to APB FSM Type
+  localparam logic   [1:0] fsm_max_p              = 2'h3; // AHB to APB FSM Type
+  localparam logic   [1:0] fsm_idle_st            = 2'h0;
+  localparam logic   [1:0] fsm_apb_ctrl_st        = 2'h1;
+  localparam logic   [1:0] fsm_apb_data_st        = 2'h2;
+  localparam logic   [1:0] fsm_ahb_err_st         = 2'h3;
+  localparam logic   [1:0] fsm_default_p          = 2'h0; // AHB to APB FSM Type
 
 
   // ------------------------------------------------------
@@ -159,16 +179,16 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   logic        irq_r;             // Level IRQ
 
   // ------------------------------------------------------
-  // address decoding
+  // transfer decoding
   // ------------------------------------------------------
   always_comb begin: proc_xfer_dec_proc
+    ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     if ((ahb_slv_sel_s == 1'b1) &&
         ((ahb_slv_htrans_i == ahb_trans_nonseq_e) || (ahb_slv_htrans_i == ahb_trans_seq_e))) begin
       new_xfer_s = 1'b1;
     end else begin
       new_xfer_s = 1'b0;
     end
-    ahb_slv_sel_s = ahb_slv_hsel_i & ahb_slv_hready_i;
     valid_addr_s = 1'b0;
     apb_default_sel_s = 1'b0;
     apb_slv3_sel_s = 1'b0;
@@ -274,6 +294,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
           pwrite_r <= 1'b0;
           pwdata_r <= 32'h00000000;
           penable_r <= 1'b0;
+          paddr_r <= 12'h000;
           apb_default_sel_r <= 1'b0;
           apb_slv3_sel_r <= 1'b0;
           apb_slv5_sel_r <= 1'b0;
@@ -311,6 +332,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   assign apb_slv_slv5_pwdata_o     = ((pwrite_r & apb_slv5_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_slv5_penable_o    = penable_r & apb_slv5_sel_r;
   assign apb_slv_slv5_psel_o       = apb_slv5_sel_r;
+  assign apb_slv_slv5_pauser_o     = 4'h2;
 
   assign irq_o = irq_r;
 
