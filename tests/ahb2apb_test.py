@@ -178,7 +178,7 @@ async def ahb2apb_test(dut):  # noqa: C901, PLR0912
         smax = (1 << (1 << (size + 3))) - 1  # max value according to size
         if random.randint(0, 1):
             wdata = [random.randint(1, smax) for i in range(blen)]
-            refdata = ahb_mst.calc_wrmem(offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata, mem=mem)
+            refdata = ahb_mst.calc_wrmem(offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata, mem=mem[tgt])
             mem[tgt][(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = refdata
             log.info(
                 f"=MST WRITE TRANSFER= target: {slaves[tgt].name}; offs:{hex(offs)}; "
