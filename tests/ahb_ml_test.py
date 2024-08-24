@@ -197,7 +197,9 @@ async def ahb_ml_test(dut):
             assert not err_resp, "Unexpected error response"
         else:
             xdata = ext_mst.calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
-            err_resp, rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            err_resp, rdata = await ext_mst.read(
+                0xF0000000 + offs, burst_type=btype, size=size, hauser=hauser, hmaster=hmaster
+            )
             assert not err_resp, "Unexpected error response"
             if tuple(rdata) == tuple(xdata):
                 log.info(
