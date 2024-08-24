@@ -60,6 +60,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   input  logic [2:0]  ahb_slv_hburst_i,          // AHB Burst Type
   input  logic [3:0]  ahb_slv_hprot_i,           // AHB Transfer Protection
   input  logic [31:0] ahb_slv_hwdata_i,          // AHB Data
+  input  logic [3:0]  ahb_slv_hwstrb_i,          // AHB Write Strobe
   input  logic        ahb_slv_hready_i,          // AHB Transfer Done to Slave
   output logic        ahb_slv_hreadyout_o,       // AHB Transfer Done from Slave
   output logic        ahb_slv_hresp_o,           // AHB Response Error
@@ -69,6 +70,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   output logic [3:0]  apb_slv_default_pauser_o,  // APB Address User Channel
   output logic        apb_slv_default_pwrite_o,  // APB Write Enable
   output logic [31:0] apb_slv_default_pwdata_o,  // APB Data
+  output logic [3:0]  apb_slv_default_pstrb_o,   // APB Write Strobe
   output logic        apb_slv_default_penable_o, // APB Transfer Enable
   output logic        apb_slv_default_psel_o,    // APB Slave Select
   input  logic [31:0] apb_slv_default_prdata_i,  // APB Data
@@ -88,6 +90,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   output logic [3:0]  apb_slv_slv5_pauser_o,     // APB Address User Channel
   output logic        apb_slv_slv5_pwrite_o,     // APB Write Enable
   output logic [31:0] apb_slv_slv5_pwdata_o,     // APB Data
+  output logic [3:0]  apb_slv_slv5_pstrb_o,      // APB Write Strobe
   output logic        apb_slv_slv5_penable_o,    // APB Transfer Enable
   output logic        apb_slv_slv5_psel_o,       // APB Slave Select
   input  logic [31:0] apb_slv_slv5_prdata_i,     // APB Data
@@ -163,9 +166,13 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   logic        ahb_slv_sel_s;
   logic [1:0]  fsm_r;             // AHB to APB FSM Type
   logic        hready_r;          // AHB Transfer Done
+  logic [3:0]  hwstrb_s;          // AHB Write Strobe
+  logic [3:0]  hwstrb_r;          // AHB Write Strobe
   logic [3:0]  hauser_r;          // AHB User Type
   logic [11:0] paddr_r;           // APB Bus Address
   logic        pwrite_r;          // APB Write Enable
+  logic [3:0]  size_strb_s;       // APB Write Strobe
+  logic [3:0]  pstrb_r;           // APB Write Strobe
   logic [31:0] pwdata_s;          // APB Data
   logic [31:0] pwdata_r;          // APB Data
   logic [31:0] prdata_s;          // APB Data
@@ -217,6 +224,37 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
         valid_addr_s = 1'b0;
       end
     endcase
+
+    if (ahb_slv_hwrite_i == ahb_write_write_e) begin
+      case (ahb_slv_hsize_i)
+        ahb_size_byte_e: begin
+          case (ahb_slv_haddr_i[1:0])
+            2'b11: begin
+              size_strb_s = 4'b1000;
+            end
+            2'b10: begin
+              size_strb_s = 4'b0100;
+            end
+            2'b01: begin
+              size_strb_s = 4'b0010;
+            end
+            default: begin
+              size_strb_s = 4'b0001;
+            end
+          endcase
+        end
+
+        ahb_size_halfword_e: begin
+          size_strb_s = (ahb_slv_haddr_i[1] == 1'b1) ? 4'b1100 : 4'b0011;
+        end
+
+        default: begin
+          size_strb_s = 4'b1111;
+        end
+      endcase
+    end else begin
+      size_strb_s = 4'h0;
+    end
   end
 
 
@@ -246,6 +284,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
       paddr_r <= 12'h000;
       pwrite_r <= 1'b0;
       pwdata_r <= 32'h00000000;
+      pstrb_r <= 4'h0;
       prdata_r <= 32'h00000000;
       penable_r <= 1'b0;
       apb_default_sel_r <= 1'b0;
@@ -262,6 +301,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
               hauser_r <= ahb_slv_hauser_i;
               paddr_r <= ahb_slv_haddr_i[11:0];
               pwrite_r <= ahb_slv_hwrite_i;
+              pstrb_r <= size_strb_s;
               apb_default_sel_r <= apb_default_sel_s;
               apb_slv3_sel_r <= apb_slv3_sel_s;
               apb_slv5_sel_r <= apb_slv5_sel_s;
@@ -272,6 +312,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
 
         fsm_apb_ctrl_st: begin
           if (pwrite_r == 1'b1) begin
+            hwstrb_r <= ahb_slv_hwstrb_i;
             pwdata_r <= ahb_slv_hwdata_i;
           end
           penable_r <= 1'b1;
@@ -286,6 +327,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
             apb_slv3_sel_r <= 1'b0;
             apb_slv5_sel_r <= 1'b0;
             pwrite_r <= 1'b0;
+            pstrb_r <= 4'h0;
             hready_r <= 1'b1;
             pwrite_r <= 1'b0;
             irq_r <= pslverr_s;
@@ -297,6 +339,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
         default: begin
           hready_r <= 1'b1;
           pwrite_r <= 1'b0;
+          pstrb_r <= 4'h0;
           pwdata_r <= 32'h00000000;
           penable_r <= 1'b0;
           paddr_r <= 12'h000;
@@ -318,6 +361,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   assign ahb_slv_hresp_o = apb_resp_okay_e;
 
   assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
+  assign hwstrb_s = (penable_r == 1'b1) ? hwstrb_r : ahb_slv_hwstrb_i;
 
   // Slave 'default':
   assign apb_slv_default_paddr_o   = (apb_default_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
@@ -325,6 +369,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   assign apb_slv_default_pwdata_o  = ((pwrite_r & apb_default_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_default_penable_o = penable_r & apb_default_sel_r;
   assign apb_slv_default_psel_o    = apb_default_sel_r;
+  assign apb_slv_default_pstrb_o   = pstrb_r & hwstrb_s;
   assign apb_slv_default_pauser_o  = hauser_r;
   // Slave 'slv3':
   assign apb_slv_slv3_paddr_o      = (apb_slv3_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
@@ -338,6 +383,7 @@ module ucdp_ahb2apb_example_ahb2apb_amba5_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   assign apb_slv_slv5_pwdata_o     = ((pwrite_r & apb_slv5_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_slv5_penable_o    = penable_r & apb_slv5_sel_r;
   assign apb_slv_slv5_psel_o       = apb_slv5_sel_r;
+  assign apb_slv_slv5_pstrb_o      = pstrb_r & hwstrb_s;
   assign apb_slv_slv5_pauser_o     = hauser_r;
 
   assign irq_o = irq_r;

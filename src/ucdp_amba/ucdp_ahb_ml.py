@@ -167,14 +167,33 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
 
         return slave
 
-    def _build_dep(self):
-        self._check_masters_slaves()
+    def _check_proto_comp(self) -> int:
+        """Check for Protocol Compatibility."""
+        verdict = 0
+        for master in self.masters:
+            mstname = master.name
+            mstproto = master.proto
+            for slave in self._master_slaves[master.name]:
+                chk = t.check_ahb_proto_pair(mstname, mstproto, slave, self.slaves[slave].proto)
+                verdict = max(verdict, chk)
+        return verdict
+
+    def _build_dep(self):  # noqa: C901, PLR0912
+        self._check_masters_slaves()  # TODO: check for problems and assert
+        if self._check_proto_comp() > 1:
+            raise AssertionError("Fatal protocol incompatibility detected.")
         self.add_type_consts(t.AhbTransType())
         self.add_type_consts(t.AhbRespType())
         self.add_type_consts(t.AhbSizeType())
         self.add_type_consts(t.AhbBurstType())
         self.add_type_consts(t.AhbWriteType())
         self.add_type_consts(AhbFsmMlType(), name="fsm", item_suffix="st")
+        has_exclxfers = max([mst.proto.has_exclxfers for mst in self.masters]) or max(
+            [slv.proto.has_exclxfers for slv in self.slaves]
+        )
+        if has_exclxfers:
+            self.add_type_consts(t.AhbHexokType())
+
         for master in self.masters:
             master_slaves = self._master_slaves[master.name]
             self.add_signal(AhbFsmMlType(), f"fsm_{master.name}_r", comment=f"Master {master.name!r} FSM")
@@ -183,19 +202,55 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
             self.add_signal(u.BitType(), f"mst_{master.name}_hready_s")
             self.add_signal(u.BitType(), f"mst_{master.name}_rqstate_s")
             self.add_signal(u.BitType(), f"mst_{master.name}_addr_err_s")
+            slv_hprotwidth = 0
+            slv_hmasterwidth = 0
+            slv_hburst = False
+            slv_hmastlock = False
+            slv_hnonsec = False
+            slv_hauser = False
             for slave in master_slaves:
+                slvproto = self.slaves[slave].proto
+                slv_hprotwidth = max(slv_hprotwidth, slvproto.hprotwidth)
+                slv_hmasterwidth = max(slv_hmasterwidth, slvproto.hmaster_width)
+                slv_hburst = slv_hburst or slvproto.has_hburst
+                slv_hmastlock = slv_hmastlock or slvproto.has_hmastlock
+                slv_hnonsec = slv_hnonsec or slvproto.has_hnonsec
+                slv_hauser = slv_hauser or slvproto.ausertype is not None
+
                 self.add_signal(u.BitType(), f"mst_{master.name}_{slave}_sel_s")
                 self.add_signal(u.BitType(), f"mst_{master.name}_{slave}_req_r")
                 self.add_signal(u.BitType(), f"mst_{master.name}_{slave}_gnt_r")
             self.add_signal(u.BitType(), f"mst_{master.name}_gnt_s")
 
+            mst_hprotwidth = min(master.proto.hprotwidth, slv_hprotwidth)
+            mst_hmasterwidth = min(master.proto.hmaster_width, slv_hmasterwidth)
             mstp_type = self.ports[f"ahb_mst_{master.name}_i"].type_
             for subt in mstp_type.values():
-                if (subt.orientation == u.BWD) or (subt.name == "hwdata"):
+                if (subt.orientation == u.BWD) or (subt.name in ["hwdata", "hwstrb"]):
                     continue
-                self.add_signal(subt.type_, f"mst_{master.name}_{subt.name}_s")
-                self.add_signal(subt.type_, f"mst_{master.name}_{subt.name}_r")
+                type_ = subt.type_
+                if subt.name == "hprot":
+                    if slv_hprotwidth == 0:
+                        continue
+                    type_ = t.AhbProtType(mst_hprotwidth)
+                if subt.name == "hmastlock" and not slv_hmastlock:
+                    continue
+                if subt.name == "hmaster":
+                    if slv_hmasterwidth == 0:
+                        continue
+                    type_ = t.AhbHMastType(mst_hmasterwidth)
+                if subt.name == "hburst" and not slv_hburst:
+                    continue
+                if subt.name == "hnonsec" and not slv_hnonsec:
+                    continue
+                if subt.name == "hburst" and not slv_hburst:
+                    continue
+                if subt.name == "hauser" and not slv_hauser:
+                    continue
+                self.add_signal(type_, f"mst_{master.name}_{subt.name}_s")
+                self.add_signal(type_, f"mst_{master.name}_{subt.name}_r")
             self.add_signal(t.AhbWriteType(), f"mst_{master.name}_hwrite_dph_r", comment="data-phase write indicator")
+
         for slave in self.slaves:
             slave_masters = self._slave_masters[slave.name]
             num_mst = len(slave_masters)
@@ -246,17 +301,49 @@ class UcdpAhbMlExampleMod(u.AMod):
     """
 
     def _build(self):
-        ml = UcdpAhbMlMod(self, "u_ml")
+        class MyUserType(t.ASecIdType):
+            """My AUser Type."""
+
+            title: str = "AHB User Type"
+            comment: str = "AHB User Type"
+
+            def _build(self):
+                self._add(0, "apps")
+                self._add(2, "comm")
+                self._add(5, "audio")
+
+        ahb5f = t.AmbaProto(
+            "ahb5f",
+            ausertype=MyUserType(default=2),
+            hmaster_width=4,
+            hprotwidth=4,
+            has_hmastlock=True,
+            has_hnonsec=True,
+            has_exclxfers=False,
+            has_wstrb=True,
+        )
+        ahb5v = ahb5f.new(
+            name="ahb5v",
+            hprotwidth=7,
+            hmaster_width=6,
+            enh_hmaster=True,
+            has_hmastlock=True,
+            has_hnonsec=True,
+            has_exclxfers=True,
+            ausertype=MyUserType(default=2),
+        )
+
+        ml = UcdpAhbMlMod(self, "u_ml", proto=ahb5f)
         ml.add_master("ext")
         ml.add_master("dsp")
 
-        slv = ml.add_slave("ram", masternames=["ext", "dsp"])
+        slv = ml.add_slave("ram", masternames=["ext", "dsp"], proto=ahb5v)
         slv.add_addrrange(0xF0000000, size=2**16)
 
-        slv = ml.add_slave("periph")
+        slv = ml.add_slave("periph", proto=ahb5v)
         slv.add_addrrange(0xF0010000, size="64kb")
 
-        slv = ml.add_slave("misc")
+        slv = ml.add_slave("misc", proto=ahb5v)
         slv.add_addrrange(size="32k")
         slv.add_addrrange(0x80000000, size="23k")
 

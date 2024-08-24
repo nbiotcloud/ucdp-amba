@@ -179,14 +179,16 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
                 use_hauser = True
         return use_hauser
 
-    def _check_pstrb(self) -> bool:
+    def _check_wstrb(self) -> tuple[bool, bool]:
         use_pstrb = False
         for slv in self.slaves:
             apbproto = slv.proto
             if (self.datawidth > 8) and (not apbproto.has_wstrb):  # noqa: PLR2004
                 LOGGER.warning(f"Bridge {self.name!r} slave {slv.name!r} can only support full-datawidth writes.")
             use_pstrb = use_pstrb or apbproto.has_wstrb
-        return use_pstrb
+        # hstrb only makes sense when there is at least one pstrb...
+        use_hstrb = self.proto.has_wstrb and use_pstrb
+        return (use_hstrb, use_pstrb)
 
     def _build(self):
         self.add_port(u.ClkRstAnType(), "main_i")
@@ -211,6 +213,10 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         self.add_signal(u.BitType(), "ahb_slv_sel_s")
         self.add_signal(Ahb2ApbFsmType(), "fsm_r")
         self.add_signal(t.AhbReadyType(), "hready_r")
+        use_hstrb, use_pstrb = self._check_wstrb()
+        if use_hstrb:
+            self.add_signal(t.AhbWstrbType(self.datawidth), "hwstrb_s")
+            self.add_signal(t.AhbWstrbType(self.datawidth), "hwstrb_r")
         if use_hauser:
             self.add_signal(self.proto.ausertype, "hauser_r")
         if self.optbw:
@@ -220,7 +226,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         rng_bits = [num.calc_unsigned_width(aspc.size - 1) for aspc in self.addrmap]
         self.add_signal(t.ApbAddrType(max(rng_bits)), "paddr_r")
         self.add_signal(t.ApbWriteType(), "pwrite_r")
-        if self._check_pstrb():
+        if use_pstrb:
             self.add_signal(t.ApbPstrbType(self.datawidth), "size_strb_s")
             self.add_signal(t.ApbPstrbType(self.datawidth), "pstrb_r")
         self.add_signal(t.ApbDataType(self.datawidth), "pwdata_s")
@@ -266,8 +272,9 @@ class UcdpAhb2apbExampleMod(u.AMod):
                 self._add(2, "comm")
                 self._add(5, "audio")
 
-        amba5 = t.AmbaProto(name="amba5", ausertype=MyUserType(default=2))
+        amba5 = t.AmbaProto(name="amba5", ausertype=MyUserType(default=2), has_wstrb=True)
         apb5 = t.AmbaProto(name="ap5", ausertype=MyUserType(default=2), has_wstrb=True)
+        apb3 = t.AmbaProto(name="ap3")
 
         for errirq in (False, True):
             for proto in (t.AMBA3, amba5):
@@ -278,7 +285,7 @@ class UcdpAhb2apbExampleMod(u.AMod):
                 ahb2apb.add_slave("slv5", proto=amba5)
 
         ahb2apb = UcdpAhb2apbMod(self, "u_odd", proto=amba5, ahb_addrwidth=27, errirq=False, optbw=True)
-        ahb2apb.add_slave("foo")
+        ahb2apb.add_slave("foo", proto=apb3)
         ahb2apb.add_slave("bar", size="1KB", proto=apb5)
-        ahb2apb.add_slave("baz", size="13kB")
+        ahb2apb.add_slave("baz", size="13kB", proto=apb3)
         # slv.add_addrrange(size="3kB")

@@ -1,20 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
-[*] Fri Aug  9 10:35:36 2024
+[*] Tue Aug 13 08:19:59 2024
 [*]
 [dumpfile] "/home/khesse/projects/ucdp-amba/tests/sim_build_ucdp_ahb2apb_example_odd/dump.fst"
-[dumpfile_mtime] "Fri Aug  9 10:15:04 2024"
-[dumpfile_size] 6594
+[dumpfile_mtime] "Tue Aug 13 08:19:10 2024"
+[dumpfile_size] 7214
 [savefile] "/home/khesse/projects/ucdp-amba/tests/ahb2apb_test.gtkw"
 [timestart] 0
-[size] 1299 764
-[pos] -248 -133
-*-8.100000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[size] 1798 906
+[pos] -1 -1
+*-5.700000 207 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] .
 [sst_width] 318
 [signals_width] 238
 [sst_expanded] 1
-[sst_vpaned_height] 214
+[sst_vpaned_height] 265
 @28
 main_clk_i
 main_rst_an_i
@@ -37,6 +37,8 @@ ahb_slv_htrans_i[1:0]
 ahb_slv_hwdata_i[31:0]
 @28
 ahb_slv_hwrite_i
+@23
+ucdp_ahb2apb_example_odd.ahb_slv_hwstrb_i[3:0]
 @200
 -Slave Foo
 @22
@@ -70,22 +72,23 @@ apb_slv_bar_pslverr_i
 apb_slv_bar_pwdata_o[31:0]
 @28
 apb_slv_bar_pwrite_o
+@22
+ucdp_ahb2apb_example_odd.apb_slv_bar_pstrb_o[3:0]
 @200
 -Slave Baz
-@23
+@22
 apb_slv_baz_paddr_o[13:0]
-apb_slv_baz_pauser_o[3:0]
-@29
+@28
 apb_slv_baz_penable_o
-@23
+@22
 apb_slv_baz_prdata_i[31:0]
-@29
+@28
 apb_slv_baz_pready_i
 apb_slv_baz_psel_o
 apb_slv_baz_pslverr_i
-@23
+@22
 apb_slv_baz_pwdata_o[31:0]
-@29
+@28
 apb_slv_baz_pwrite_o
 [pattern_trace] 1
 [pattern_trace] 0

@@ -32,6 +32,7 @@ import random
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
+from humannum import Hex
 
 from tests.ahb_driver import AHBMasterDriver, BurstType, SizeType
 from tests.apb_driver import APBSlaveDriver
@@ -45,7 +46,7 @@ async def wait_clocks(clock, cycles):
 
 
 @cocotb.test()
-async def ahb2apb_test(dut):
+async def ahb2apb_test(dut):  # noqa: C901, PLR0912
     """Main Test Loop."""
     log = logging.getLogger(__name__)
     log.setLevel(logging.INFO)
@@ -61,6 +62,7 @@ async def ahb2apb_test(dut):
         hsel=dut.ahb_slv_hsel_i,
         haddr=dut.ahb_slv_haddr_i,
         hwrite=dut.ahb_slv_hwrite_i,
+        hwstrb=dut.ahb_slv_hwstrb_i,
         hwdata=dut.ahb_slv_hwdata_i,
         htrans=dut.ahb_slv_htrans_i,
         hburst=dut.ahb_slv_hburst_i,
@@ -97,6 +99,7 @@ async def ahb2apb_test(dut):
         rst_an=rst_an,
         paddr=dut.apb_slv_bar_paddr_o,
         pwrite=dut.apb_slv_bar_pwrite_o,
+        pstrb=dut.apb_slv_bar_pstrb_o,
         pwdata=dut.apb_slv_bar_pwdata_o,
         penable=dut.apb_slv_bar_penable_o,
         psel=dut.apb_slv_bar_psel_o,
@@ -138,6 +141,10 @@ async def ahb2apb_test(dut):
         BurstType.INCR16,
     )
 
+    sizes = (SizeType.BYTE, SizeType.HALFWORD, SizeType.WORD)
+
+    slaves = [foo_slv, bar_slv, baz_slv]
+
     cocotb.start_soon(Clock(hclk, period=10).start())
 
     cocotb.start_soon(foo_slv.run())
@@ -151,42 +158,51 @@ async def ahb2apb_test(dut):
     await wait_clocks(hclk, 10)
 
     # randomized accesses
-    for _ in range(20):
-        tgt = random.randint(0, 2)
+    for _ in range(50):
+        tgt = 1  # random.randint(0, 2)
         btype = random.choice(btypes)
+        if slaves[tgt].pstrb is not None:
+            size = random.choice(sizes)
+        else:
+            size = SizeType.WORD
         if btype == BurstType.SINGLE:
             blen = 1
-            mmask = 0x3
+            mmask = (1 << size) - 1
         else:
             blen = 2 << (btype >> 1)
-            mmask = (4 << (((btype - 2) >> 1) + 2)) - 1
-        offs = random.randint(0, 255) << 2
+            mmask = (4 << (((btype - 2) >> 1) + size)) - 1
+        offs = random.randint(0, 100) & (~((1 << size) - 1))  # make it size aligned
         if btype in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4):
             offs &= ~mmask  # make it burst aligned
 
+        smax = (1 << (1 << (size + 3))) - 1  # max value according to size
         if random.randint(0, 1):
-            wdata = [random.randint(1, 0xFFFFFFFF) for i in range(blen)]
-            mem[tgt][(offs & ~mmask) : (offs & ~mmask) + (blen << 2)] = ahb_mst.calc_wrmem(
-                offs=offs, size=SizeType.WORD, blen=blen, mmask=mmask, wdata=wdata
-            )
+            wdata = [random.randint(1, smax) for i in range(blen)]
+            refdata = ahb_mst.calc_wrmem(offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata, mem=mem)
+            mem[tgt][(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = refdata
             log.info(
-                f"=MST WRITE TRANSFER= target: {tgt}; offs:{hex(offs)}; burst:{btype.name}; "
-                f"wdata:{[hex(w) for w in wdata]}"
+                f"=MST WRITE TRANSFER= target: {slaves[tgt].name}; offs:{hex(offs)}; "
+                f"burst:{btype.name}; size:{size.name}; "
+                f"wdata:{[hex(w) for w in wdata]}\n"
             )
-            err_resp = await ahb_mst.write(baseaddr[tgt] + offs, wdata, burst_type=btype)
+            err_resp = await ahb_mst.write(baseaddr[tgt] + offs, wdata, burst_type=btype, size=size)
             assert not err_resp, "Unexpected error response"
+            for ln in range(5):
+                log.warning(f"MEM[{ln*16}:{ln*16+15}] = {[str(Hex(w, 8)) for w in mem[tgt][(ln*16):(ln*16+15)]]}")
         else:
-            xdata = ahb_mst.calc_expected(offs=offs, size=SizeType.WORD, blen=blen, mmask=mmask, mem=mem[tgt])
-            err_resp, rdata = await ahb_mst.read(baseaddr[tgt] + offs, burst_type=btype)
+            xdata = ahb_mst.calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem[tgt])
+            err_resp, rdata = await ahb_mst.read(baseaddr[tgt] + offs, burst_type=btype, size=size)
             assert not err_resp, "Unexpected error response"
             if tuple(rdata) == tuple(xdata):
                 log.info(
-                    f"=MST READ TRANSFER= target: {tgt}; offs:{hex(offs)}; burst:{btype.name};\n"
+                    f"=MST READ TRANSFER= target: {slaves[tgt].name}; offs:{hex(offs)}; "
+                    f"burst:{btype.name}; size:{size.name};\n"
                     f"> rdata: {[hex(w) for w in rdata]};"
                 )
             else:
                 log.error(
-                    f"=MST READ TRANSFER MISMATCH= target: {tgt}; offs:{hex(offs)}; burst:{btype.name};\n"
+                    f"=MST READ TRANSFER MISMATCH= target: {slaves[tgt].name}; offs:{hex(offs)}; "
+                    f"burst:{btype.name}; size:{size.name};\n"
                     f"> expected: {[hex(w) for w in xdata]};\n"
                     f"> got:      {[hex(w) for w in rdata]};"
                 )

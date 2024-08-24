@@ -89,44 +89,48 @@ ${parent.logic(indent=indent, skip=skip)}\
     endcase
 % if use_pstrb:
 
+    if (ahb_slv_hwrite_i == ahb_write_write_e) begin
 %   if mod.datawidth == 32:
-    case (ahb_slv_hsize_i)
-      ahb_size_byte_e: begin
-        case (ahb_slv_haddr_i[1:0])
-          2'b11: begin
-            size_strb_s = 4'b1000;
-          end
-          2'b10: begin
-            size_strb_s = 4'b0100;
-          end
-          2'b01: begin
-            size_strb_s = 4'b0010;
-          end
-          default: begin
-            size_strb_s = 4'b0001;
-          end
-        endcase
-      end
+      case (ahb_slv_hsize_i)
+        ahb_size_byte_e: begin
+          case (ahb_slv_haddr_i[1:0])
+            2'b11: begin
+              size_strb_s = 4'b1000;
+            end
+            2'b10: begin
+              size_strb_s = 4'b0100;
+            end
+            2'b01: begin
+              size_strb_s = 4'b0010;
+            end
+            default: begin
+              size_strb_s = 4'b0001;
+            end
+          endcase
+        end
 
-      ahb_size_halfword_e: begin
-        size_strb_s = (ahb_slv_haddr_i[0] == 1'b1) ? 4'b1100 : 4'b0011;
-      end
+        ahb_size_halfword_e: begin
+          size_strb_s = (ahb_slv_haddr_i[1] == 1'b1) ? 4'b1100 : 4'b0011;
+        end
 
-      default: begin
-        size_strb_s = 4'b1111;
-      end
-    endcase
+        default: begin
+          size_strb_s = 4'b1111;
+        end
+      endcase
 %   elif mod.datawidth == 16:
-    case (ahb_slv_hsize_i)
-      ahb_size_byte_e: begin
-        size_strb_s = (ahb_slv_haddr_i[0] == 1'b1) ? 2'b10 : 2'b01;
-      end
+      case (ahb_slv_hsize_i)
+        ahb_size_byte_e: begin
+          size_strb_s = (ahb_slv_haddr_i[0] == 1'b1) ? 2'b10 : 2'b01;
+        end
 
-      default: begin
-        size_strb_s = 2'b11;
-      end
-    endcase
+        default: begin
+          size_strb_s = 2'b11;
+        end
+      endcase
 %   endif
+    end else begin
+      size_strb_s = ${rslvr._get_uint_value(0, mod.datawidth//8)};
+    end
 % endif
   end
 
@@ -214,7 +218,7 @@ ${parent.logic(indent=indent, skip=skip)}\
               paddr_r <= ${ff_dly}ahb_slv_haddr_i[${paddr_slice}];
               pwrite_r <= ${ff_dly}ahb_slv_hwrite_i;
 % if use_pstrb:
-              pstrb_r <= ${ff_dly}(ahb_slv_hwrite_i == ahb_write_write_e) ? size_strb_s : ${rslvr._get_uint_value(0, mod.datawidth//8)};
+              pstrb_r <= ${ff_dly}size_strb_s;
 % endif
 % for aspc in mod.addrmap:
               apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
@@ -235,6 +239,9 @@ ${parent.logic(indent=indent, skip=skip)}\
 
         fsm_apb_ctrl_st: begin
           if (pwrite_r == 1'b1) begin
+% if use_hstrb:
+            hwstrb_r <= ${ff_dly}ahb_slv_hwstrb_i;
+% endif
             pwdata_r <= ${ff_dly}ahb_slv_hwdata_i;
           end
           penable_r <= ${ff_dly}1'b1;
@@ -274,7 +281,7 @@ ${parent.logic(indent=indent, skip=skip)}\
                 paddr_r <= ${ff_dly}ahb_slv_haddr_i[${paddr_slice}];
                 pwrite_r <= ${ff_dly}ahb_slv_hwrite_i;
 %   if use_pstrb:
-                pstrb_r <= ${ff_dly}(ahb_slv_hwrite_i == ahb_write_write_e) ? size_strb_s : ${rslvr._get_uint_value(0, mod.datawidth//8)};
+                pstrb_r <= ${ff_dly}size_strb_s;
 %   endif
 %   for aspc in mod.addrmap:
                 apb_${aspc.name}_sel_r <= ${ff_dly}apb_${aspc.name}_sel_s;
@@ -379,7 +386,10 @@ ${parent.logic(indent=indent, skip=skip)}\
     outp_asgn.add_row(f"apb_slv_{aspc.name}_psel_o", f"apb_{aspc.name}_sel_r;")
     slvprot = mod.slaves[aspc.name].proto
     if slvprot.has_wstrb:
-      outp_asgn.add_row(f"apb_slv_{aspc.name}_pstrb_o", "pstrb_r;") ## TODO: and with hwstrb...
+      if use_hstrb:
+        outp_asgn.add_row(f"apb_slv_{aspc.name}_pstrb_o", "pstrb_r & hwstrb_s;")
+      else:
+        outp_asgn.add_row(f"apb_slv_{aspc.name}_pstrb_o", "pstrb_r;")
     pauser = slvprot.ausertype
     if pauser is not None:
       if use_hauser:
@@ -404,6 +414,9 @@ ${parent.logic(indent=indent, skip=skip)}\
 % endif
 
   assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
+% if use_hstrb:
+  assign hwstrb_s = (penable_r == 1'b1) ? hwstrb_r : ahb_slv_hwstrb_i;
+% endif
 
 ${outp_asgn.get()}
 % if mod.errirq:

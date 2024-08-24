@@ -141,6 +141,7 @@ class APBSlaveDriver:
         prdata: SimHandle,
         pready: SimHandle,
         pslverr: SimHandle,
+        pstrb: SimHandle = None,
         pready_delay: int = 0,
         size_bytes: int = 1024,
         err_addr: dict[Literal["r", "w", "rw"], list[int]] | None = None,
@@ -158,6 +159,7 @@ class APBSlaveDriver:
         self.psel = psel
         self.pready = pready
         self.pslverr = pslverr
+        self.pstrb = pstrb
         self.err_addr = err_addr
         self.addr_width = len(paddr)
         self.data_width = len(pwdata)
@@ -173,26 +175,30 @@ class APBSlaveDriver:
 
     def _read(self, addr: int) -> int:
         """APB Read."""
-        bytes = self.mem[addr : addr + self.byte_width]
+        bwidth = self.byte_width
+        addr = addr & ((1 << self.addr_width) - bwidth)  # align address to data width
+        bytes = self.mem[addr : addr + bwidth]
         rdata = int.from_bytes(bytes, "little")
         hexaddr = str(Hex(addr, self.addr_width))
         hexdata = str(Hex(rdata, self.data_width))
-        hexbytes = ",".join(str(Hex(x, 2)) for x in bytes)
-
+        hexbytes = ",".join(str(Hex(x, 8)) for x in bytes)
         self.logger.info(f"=SLV READ= address: {hexaddr} data: {hexdata} data (bytes): {hexbytes}")
         return rdata
 
-    def _write(self, addr: int, data: int) -> None:
+    def _write(self, addr: int, data: int, strb: int) -> None:
         """APB Write."""
-        # TODO: handle APB5 with pstrb
-
-        wdata = data
-        bytes = int.to_bytes(wdata, self.byte_width, "little")
+        bwidth = self.byte_width
+        addr = addr & ((1 << self.addr_width) - bwidth)  # align address to data width
+        strbs = [(strb >> i) & 1 for i in range(bwidth)]
+        bytes = bytearray(int.to_bytes(data, self.byte_width, "little"))
+        for b in range(bwidth):
+            if not strbs[b]:
+                bytes[b] = self.mem[addr + b]  # replace with read value
         hexaddr = str(Hex(addr, self.addr_width))
-        hexdata = str(Hex(wdata, self.data_width))
-        hexbytes = ",".join(str(Hex(x, 2)) for x in bytes)
-        self.logger.info(f"=SLV WRITE= address: {hexaddr} data: {hexdata} data (bytes): {hexbytes}")
-        self.mem[addr : addr + self.byte_width] = bytes
+        hexdata = str(Hex(data, self.data_width))
+        hexbytes = ",".join(str(Hex(x, 8)) for x in bytes)
+        self.logger.info(f"=SLV WRITE= address: {hexaddr} data: {hexdata} data (bytes): {hexbytes} strb: {strbs}")
+        self.mem[addr : addr + bwidth] = bytes
 
     def _check_err_addr(self, paddr: int, pwrite: int) -> bool:
         """Check for Error Address."""
@@ -210,6 +216,7 @@ class APBSlaveDriver:
         self.pready.value = 1
         self.prdata.value = 0xDEADDEAD
         self.pslverr.value = 0
+        allstrb = (1 << self.byte_width) - 1
         while True:
             await RisingEdge(self.clk)
             if self.state:
@@ -219,7 +226,11 @@ class APBSlaveDriver:
                 self.pready.value = 1
                 self.pslverr.value = 0
                 if (self.state == 1) and self.pwrite.value:
-                    self._write(self.paddr.value.integer, self.pwdata.value.integer)
+                    self._write(
+                        self.paddr.value.integer,
+                        self.pwdata.value.integer,
+                        self.pstrb.value.integer if self.pstrb else allstrb,
+                    )
             # Check if there's an APB request starting
             if self.psel.value and not self.penable.value:
                 self.state = 1
@@ -259,5 +270,5 @@ class APBSlaveDriver:
         for i in range(start_addr, end_addr + 1, chunk_size):
             hexstart = str(Hex(i, self.addr_width))
             hexend = str(Hex(i + chunk_size - 1, self.addr_width))
-            memcts = ",".join(str(Hex(x, 2)) for x in self.mem[i : min(i + chunk_size, end_addr + 1)])
+            memcts = ",".join(str(Hex(x, 8)) for x in self.mem[i : min(i + chunk_size, end_addr + 1)])
             self.logger.info(f"=MEMORY CONTENTS= {hexstart}-{hexend} [{memcts}]")

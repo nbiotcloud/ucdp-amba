@@ -35,7 +35,11 @@ Mainly these types are needed:
 * :any:`ApbSlvType`
 """
 
+from logging import getLogger
+
 import ucdp as u
+
+LOGGER = getLogger(__name__)
 
 LEGAL_AHB_ADDR_WIDTH = range(10, 65)
 LEGAL_AHB_DATA_WIDTH = [8, 16, 32, 64, 128, 256, 512, 1024]
@@ -106,15 +110,17 @@ class AmbaProto(u.AConfig):
     has_hmastlock (bool): Determines whether AHB hmastlock exists
     has_hnonsec (bool): Determines whether AHB hnonsec signal exists
     has_exclxfers (bool): Determines whether AHB signals for exclusive transfers exist (hexcl, hmaster, hexokay)
-    hmaster_width (int): Bitwidth for AHB hmaster signal (only valid when has_exclxfers is True)
+    hmaster_width (int): Bitwidth for AHB hmaster signal
+    enh_hmaster )bool): Determines whether hmaster signal is enhanced with master index on an interconnect
     has_wstrb (bool): Determines whether AHB hwstrb or APB pstrb write strobe signals exist
     has_pprot (bool): Determines whether APB pprot signal exists
     has_pnse (bool):  Determines whether APB uses Realm Management Extensions
     ausertype (AEnumType|UintType): Type used for AHB hauser or APB pauser signal
     """
 
-    hprotwidth: int | None = 4
-    hmaster_width: int | None = 4
+    hprotwidth: int = 4
+    hmaster_width: int = 0
+    enh_hmaster: bool = False
     has_hburst: bool = True
     has_hmastlock: bool = False
     has_hnonsec: bool = False
@@ -134,7 +140,7 @@ class AmbaProto(u.AConfig):
     @property
     def hmaster_type(self) -> AhbHMastType | None:
         """Protocol has HMASTER signal."""
-        if self.has_exclxfers and self.hmaster_width:
+        if self.hmaster_width:
             return AhbHMastType(width=self.hmaster_width)
         return None
 
@@ -163,14 +169,15 @@ class AhbMstType(u.AStructType):
     StructItem('hresp', AhbRespType(), orientation=BWD, doc=Doc(title='AHB Response Error', ...))
     StructItem('hrdata', AhbDataType(32), orientation=BWD, doc=Doc(title='AHB Data', ...))
 
-    With `hauser`:
+    With all extras:
 
     >>> class AuserType(ASecIdType):
     ...     def _build(self):
     ...         self._add(0, "apps")
     ...         self._add(2, "comm")
     ...         self._add(5, "audio")
-    >>> ahb5 = AmbaProto("AHB5", ausertype=AuserType(default=2))
+    >>> ahb5 = AmbaProto("AHB5", ausertype=AuserType(default=2), hmaster_width=3,\
+    has_hmastlock=True, has_hnonsec=True, has_exclxfers=True, has_wstrb=True)
 
     >>> for item in AhbMstType(proto=ahb5).values(): item
     StructItem('htrans', AhbTransType(), doc=Doc(title='AHB Transfer Type', ...))
@@ -180,9 +187,15 @@ class AhbMstType(u.AStructType):
     StructItem('hsize', AhbSizeType(), doc=Doc(title='AHB Size', ...))
     StructItem('hburst', AhbBurstType(), doc=Doc(title='AHB Burst Type', ...))
     StructItem('hprot', AhbProtType(4, default=3), doc=Doc(title='AHB Transfer Protection', ...))
+    StructItem('hnonsec', AhbNonsecType(), doc=Doc(title='AHB Secure Transfer', ...))
+    StructItem('hmastlock', AhbMastlockType(), doc=Doc(title='AHB Locked Sequence Enable', ...))
     StructItem('hwdata', AhbDataType(32), doc=Doc(title='AHB Data', ...))
+    StructItem('hwstrb', AhbWstrbType(4), doc=Doc(title='AHB Write Strobe', ...))
+    StructItem('hexcl', AhbExclType(), doc=Doc(title='AHB Exclusive Transfer', ...))
+    StructItem('hmaster', AhbHMastType(3), doc=Doc(title='AHB Master ID', ...))
     StructItem('hready', AhbReadyType(), orientation=BWD, doc=Doc(title='AHB Transfer Done', ...))
     StructItem('hresp', AhbRespType(), orientation=BWD, doc=Doc(title='AHB Response Error', ...))
+    StructItem('hexokay', AhbHexokType(), orientation=BWD, doc=Doc(title='AHB Exclusive Response', ...))
     StructItem('hrdata', AhbDataType(32), orientation=BWD, doc=Doc(title='AHB Data', ...))
 
     Both protocol versions are not connectable:
@@ -260,7 +273,7 @@ class AhbMstType(u.AStructType):
             self._add("hmastlock", AhbMastlockType())
         self._add("hwdata", AhbDataType(self.datawidth))
         if self.proto.has_wstrb:
-            self._add("hwstrb", AhbStrbType(width=self.datawidth // 8))
+            self._add("hwstrb", AhbWstrbType(self.datawidth))
         if self.proto.has_exclxfers:
             self._add("hexcl", AhbExclType())
         if hmasttype := self.proto.hmaster_type:
@@ -269,8 +282,7 @@ class AhbMstType(u.AStructType):
         self._add("hready", AhbReadyType(), u.BWD)
         self._add("hresp", AhbRespType(), u.BWD)
         if self.proto.has_exclxfers:
-            hexokdoc = "AHB Exclusive Transfer Response"
-            self._add("hexokay", AhbRespType(), u.BWD, title=hexokdoc, comment=hexokdoc)
+            self._add("hexokay", AhbHexokType(), u.BWD)
         self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
 
     def cast(self, other):
@@ -444,7 +456,7 @@ class AhbSlvType(u.AStructType):
             self._add("hmastlock", AhbMastlockType())
         self._add("hwdata", AhbDataType(self.datawidth))
         if self.proto.has_wstrb:
-            self._add("hwstrb", AhbStrbType(width=self.datawidth // 8))
+            self._add("hwstrb", AhbWstrbType(self.datawidth))
         title: str = "AHB Transfer Done to Slave"
         self._add("hready", AhbReadyType(), title=title, comment=title)
         if self.proto.has_exclxfers:
@@ -456,8 +468,7 @@ class AhbSlvType(u.AStructType):
         self._add("hreadyout", AhbReadyType(), u.BWD, title=title, comment=title)
         self._add("hresp", AhbRespType(), u.BWD)
         if self.proto.has_exclxfers:
-            hexokdoc = "AHB Exclusive Transfer Response"
-            self._add("hexokay", AhbRespType(), u.BWD, title=hexokdoc, comment=hexokdoc)
+            self._add("hexokay", AhbHexokType(), u.BWD)
         self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
 
     def cast(self, other):
@@ -663,19 +674,28 @@ class AhbWriteType(u.AEnumType):
         self._add(1, "write", "Write operation")
 
 
-class AhbStrbType(u.UintType):
+class AhbWstrbType(u.UintType):
     """
     AHB Write Strobe.
 
-    >>> AhbStrbType().width
+    Write strobe width is derived directly from data width.
+    >>> AhbWstrbType().width
     4
+
+    Data width is checked for legal values:
+    >>> t = AhbWstrbType(42)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for AHB datawidth: 42. Legal values are [8, 16, 32, 64, 128, 256, 512, 1024]
     """
 
     title: str = "AHB Write Strobe"
     comment: str = "AHB Write Strobe"
 
-    def __init__(self, width=4, **kwargs):
-        super().__init__(width=width, **kwargs)
+    def __init__(self, datawidth=32, **kwargs):
+        if datawidth not in LEGAL_AHB_DATA_WIDTH:
+            raise ValueError(f"Illegal value for AHB datawidth: {datawidth}. Legal values are {LEGAL_AHB_DATA_WIDTH}")
+        super().__init__(width=datawidth // 8, **kwargs)
 
 
 class AhbNonsecType(u.AEnumType):
@@ -724,6 +744,18 @@ class AhbRespType(u.AEnumType):
         self._add(1, "error", "Error")
 
 
+class AhbHexokType(u.AEnumType):
+    """AHB Hexokay Type."""
+
+    keytype: u.BitType = u.BitType()
+    title: str = "AHB Exclusive Response"
+    comment: str = "AHB Exclusive Response"
+
+    def _build(self):
+        self._add(0, "error", "Error")
+        self._add(1, "okay", "OK")
+
+
 class AhbReadyType(u.AEnumType):
     """
     AHB Ready Type.
@@ -742,7 +774,7 @@ class AhbReadyType(u.AEnumType):
         self._add(1, "done", "Done")
 
 
-class AhbExclType(u.EnumItem):
+class AhbExclType(u.AEnumType):
     """
     AHB Exclusive Transfer Type.
     """
@@ -834,7 +866,7 @@ class ApbSlvType(u.AStructType):
         self._add("pwrite", ApbWriteType())
         self._add("pwdata", ApbDataType(self.datawidth))
         if self.proto.has_wstrb:
-            self._add("pstrb", ApbStrbType(width=self.datawidth // 8))
+            self._add("pstrb", ApbPstrbType(self.datawidth))
         self._add("penable", ApbEnaType())
         self._add("psel", ApbSelType())
         # BWD
@@ -936,6 +968,16 @@ class ApbDataType(u.UintType):
 class ApbPstrbType(u.UintType):
     """
     APB Write Strobe.
+
+    Write strobe width is derived directly from data width.
+    >>> ApbPstrbType().width
+    4
+
+    Data width is checked for legal values:
+    >>> t = ApbPstrbType(29)
+    Traceback (most recent call last):
+    ...
+    ValueError: Illegal value for APB datawidth: 29. Legal values are [8, 16, 32]
     """
 
     title: str = "APB Write Strobe"
@@ -981,21 +1023,6 @@ class ApbWriteType(u.AEnumType):
     def _build(self):
         self._add(0, "read", "Read operation")
         self._add(1, "write", "Write operation")
-
-
-class ApbStrbType(u.UintType):
-    """
-    APB Write Strobe.
-
-    >>> ApbStrbType().width
-    4
-    """
-
-    title: str = "APB Write Strobe"
-    comment: str = "APB Write Strobe"
-
-    def __init__(self, width=4, **kwargs):
-        super().__init__(width=width, **kwargs)
 
 
 class ApbRespType(u.AEnumType):
@@ -1050,3 +1077,65 @@ class ApbReadyType(u.AEnumType):
 #     def _build(self):
 #         self._add(0, "busy", "Busy", comment="Transfers Ongoing")
 #         self._add(1, "idle", "Idle")
+
+
+def check_ahb_proto_pair(src_name: str, src_proto: AmbaProto, tgt_name: str, tgt_proto: AmbaProto) -> int:  # noqa: C901
+    """Check AHB Protocol Compatibility."""
+    if src_proto == tgt_proto:  # no need to check
+        return 0
+
+    opts = {
+        "has_hburst": "hburst",
+        "has_hmastlock": "hmastlock",
+        "has_hnonsec": "hnonsec",
+        "has_exclxfers": "hexcl/hexokay",
+        "has_wstrb": "hwstrb",
+    }
+    src_dict = dict(src_proto)
+    tgt_dict = dict(tgt_proto)
+    verdict = 0
+    pre1 = f"Protocol Pair for Source {src_name} with Protocol {src_proto.name} "
+    pre2 = f"and Target {tgt_name} with Protocol {tgt_proto.name}"
+    preamble = pre1 + pre2
+    LOGGER.info(f"Checking {preamble}.")
+
+    if (
+        src_proto.ausertype is not None
+        and tgt_proto.ausertype is not None
+        and src_proto.ausertype != tgt_proto.ausertype
+    ):
+        LOGGER.error(f"{preamble}: Incompatible Definitions for 'hauser'!")
+        verdict = 2
+    elif src_proto.ausertype is not None and tgt_proto.ausertype is None:
+        LOGGER.warning(f"{preamble}: Ignoring source 'hauser'.")
+        verdict = 1
+    elif src_proto.ausertype is None and tgt_proto.ausertype is not None:
+        LOGGER.warning(f"{preamble}: Clamping target 'hauser'.")
+        verdict = 1
+    if src_proto.hprotwidth > 0 and tgt_proto.hprotwidth == 0:
+        LOGGER.warning(f"{preamble}: Ignoring source 'hprot'.")
+        verdict = 1
+    elif src_proto.hprotwidth == 0 and tgt_proto.hprotwidth > 0:
+        LOGGER.warning(f"{preamble}: Clamping target 'hprot'.")
+        verdict = 1
+    elif src_proto.hprotwidth != tgt_proto.hprotwidth:
+        LOGGER.warning(f"{preamble}: Different width for 'hprot' signals.")
+        verdict = 1
+    if src_proto.hmaster_width > tgt_proto.hmaster_width:
+        slc = "MSBs of " if tgt_proto.hmaster_width else ""
+        LOGGER.warning(f"{preamble}: Ignoring {slc}source 'hmaster'.")
+        verdict = max(verdict, 1)
+    elif src_proto.hmaster_width < tgt_proto.hmaster_width:
+        slc = "MSBs of " if src_proto.hmaster_width else ""
+        LOGGER.warning(f"{preamble}: Clamping {slc}target 'hmaster'.")
+        verdict = max(verdict, 1)
+
+    for opt, sig in opts.items():
+        if src_dict[opt] and not tgt_dict[opt]:
+            LOGGER.warning(f"{preamble}: Ignoring source '{sig}'.")
+            verdict = max(verdict, 1)
+        elif not src_dict[opt] and tgt_dict[opt]:
+            LOGGER.warning(f"{preamble}: Clamping target '{sig}'.")
+            verdict = max(verdict, 1)
+
+    return verdict

@@ -59,13 +59,13 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   input  logic [2:0]  ahb_slv_hburst_i,      // AHB Burst Type
   input  logic [3:0]  ahb_slv_hprot_i,       // AHB Transfer Protection
   input  logic [31:0] ahb_slv_hwdata_i,      // AHB Data
+  input  logic [3:0]  ahb_slv_hwstrb_i,      // AHB Write Strobe
   input  logic        ahb_slv_hready_i,      // AHB Transfer Done to Slave
   output logic        ahb_slv_hreadyout_o,   // AHB Transfer Done from Slave
   output logic        ahb_slv_hresp_o,       // AHB Response Error
   output logic [31:0] ahb_slv_hrdata_o,      // AHB Data
   // apb_slv_foo_o: APB Slave 'foo'
   output logic [11:0] apb_slv_foo_paddr_o,   // APB Bus Address
-  output logic [3:0]  apb_slv_foo_pauser_o,  // APB Address User Channel
   output logic        apb_slv_foo_pwrite_o,  // APB Write Enable
   output logic [31:0] apb_slv_foo_pwdata_o,  // APB Data
   output logic        apb_slv_foo_penable_o, // APB Transfer Enable
@@ -86,7 +86,6 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   input  logic        apb_slv_bar_pready_i,  // APB Transfer Done
   // apb_slv_baz_o: APB Slave 'baz'
   output logic [13:0] apb_slv_baz_paddr_o,   // APB Bus Address
-  output logic [3:0]  apb_slv_baz_pauser_o,  // APB Address User Channel
   output logic        apb_slv_baz_pwrite_o,  // APB Write Enable
   output logic [31:0] apb_slv_baz_pwdata_o,  // APB Data
   output logic        apb_slv_baz_penable_o, // APB Transfer Enable
@@ -164,6 +163,8 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   logic        ahb_slv_sel_s;
   logic [1:0]  fsm_r;         // AHB to APB FSM Type
   logic        hready_r;      // AHB Transfer Done
+  logic [3:0]  hwstrb_s;      // AHB Write Strobe
+  logic [3:0]  hwstrb_r;      // AHB Write Strobe
   logic [3:0]  hauser_r;      // AHB User Type
   logic        hready_s;      // AHB Transfer Done
   logic        hresp_r;       // APB Response Error
@@ -222,32 +223,36 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
       end
     endcase
 
-    case (ahb_slv_hsize_i)
-      ahb_size_byte_e: begin
-        case (ahb_slv_haddr_i[1:0])
-          2'b11: begin
-            size_strb_s = 4'b1000;
-          end
-          2'b10: begin
-            size_strb_s = 4'b0100;
-          end
-          2'b01: begin
-            size_strb_s = 4'b0010;
-          end
-          default: begin
-            size_strb_s = 4'b0001;
-          end
-        endcase
-      end
+    if (ahb_slv_hwrite_i == ahb_write_write_e) begin
+      case (ahb_slv_hsize_i)
+        ahb_size_byte_e: begin
+          case (ahb_slv_haddr_i[1:0])
+            2'b11: begin
+              size_strb_s = 4'b1000;
+            end
+            2'b10: begin
+              size_strb_s = 4'b0100;
+            end
+            2'b01: begin
+              size_strb_s = 4'b0010;
+            end
+            default: begin
+              size_strb_s = 4'b0001;
+            end
+          endcase
+        end
 
-      ahb_size_halfword_e: begin
-        size_strb_s = (ahb_slv_haddr_i[0] == 1'b1) ? 4'b1100 : 4'b0011;
-      end
+        ahb_size_halfword_e: begin
+          size_strb_s = (ahb_slv_haddr_i[1] == 1'b1) ? 4'b1100 : 4'b0011;
+        end
 
-      default: begin
-        size_strb_s = 4'b1111;
-      end
-    endcase
+        default: begin
+          size_strb_s = 4'b1111;
+        end
+      endcase
+    end else begin
+      size_strb_s = 4'h0;
+    end
   end
 
 
@@ -296,7 +301,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
               hresp_r <= apb_resp_okay_e;
               paddr_r <= ahb_slv_haddr_i[13:0];
               pwrite_r <= ahb_slv_hwrite_i;
-              pstrb_r <= (ahb_slv_hwrite_i == ahb_write_write_e) ? size_strb_s : 4'h0;
+              pstrb_r <= size_strb_s;
               apb_foo_sel_r <= apb_foo_sel_s;
               apb_bar_sel_r <= apb_bar_sel_s;
               apb_baz_sel_r <= apb_baz_sel_s;
@@ -312,6 +317,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
 
         fsm_apb_ctrl_st: begin
           if (pwrite_r == 1'b1) begin
+            hwstrb_r <= ahb_slv_hwstrb_i;
             pwdata_r <= ahb_slv_hwdata_i;
           end
           penable_r <= 1'b1;
@@ -335,7 +341,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
                 hauser_r <= ahb_slv_hauser_i;
                 paddr_r <= ahb_slv_haddr_i[13:0];
                 pwrite_r <= ahb_slv_hwrite_i;
-                pstrb_r <= (ahb_slv_hwrite_i == ahb_write_write_e) ? size_strb_s : 4'h0;
+                pstrb_r <= size_strb_s;
                 apb_foo_sel_r <= apb_foo_sel_s;
                 apb_bar_sel_r <= apb_bar_sel_s;
                 apb_baz_sel_r <= apb_baz_sel_s;
@@ -392,6 +398,7 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   assign ahb_slv_hresp_o = hresp_r;
 
   assign pwdata_s = (penable_r == 1'b1) ? pwdata_r : ahb_slv_hwdata_i;
+  assign hwstrb_s = (penable_r == 1'b1) ? hwstrb_r : ahb_slv_hwstrb_i;
 
   // Slave 'foo':
   assign apb_slv_foo_paddr_o   = (apb_foo_sel_r  == 1'b1) ? paddr_r[11:0] : 12'h000;
@@ -399,14 +406,13 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   assign apb_slv_foo_pwdata_o  = ((pwrite_r & apb_foo_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_foo_penable_o = penable_r & apb_foo_sel_r;
   assign apb_slv_foo_psel_o    = apb_foo_sel_r;
-  assign apb_slv_foo_pauser_o  = hauser_r;
   // Slave 'bar':
   assign apb_slv_bar_paddr_o   = (apb_bar_sel_r  == 1'b1) ? paddr_r[9:0] : 10'h000;
   assign apb_slv_bar_pwrite_o  = pwrite_r & apb_bar_sel_r;
   assign apb_slv_bar_pwdata_o  = ((pwrite_r & apb_bar_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_bar_penable_o = penable_r & apb_bar_sel_r;
   assign apb_slv_bar_psel_o    = apb_bar_sel_r;
-  assign apb_slv_bar_pstrb_o   = pstrb_r;
+  assign apb_slv_bar_pstrb_o   = pstrb_r & hwstrb_s;
   assign apb_slv_bar_pauser_o  = hauser_r;
   // Slave 'baz':
   assign apb_slv_baz_paddr_o   = (apb_baz_sel_r  == 1'b1) ? paddr_r[13:0] : 14'h0000;
@@ -414,7 +420,6 @@ module ucdp_ahb2apb_example_odd ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
   assign apb_slv_baz_pwdata_o  = ((pwrite_r & apb_baz_sel_r)  == 1'b1) ? pwdata_s : 32'h00000000;
   assign apb_slv_baz_penable_o = penable_r & apb_baz_sel_r;
   assign apb_slv_baz_psel_o    = apb_baz_sel_r;
-  assign apb_slv_baz_pauser_o  = hauser_r;
 
 
 endmodule // ucdp_ahb2apb_example_odd
