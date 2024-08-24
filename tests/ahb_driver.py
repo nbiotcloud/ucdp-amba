@@ -103,7 +103,7 @@ def _check_bus_acc(data_width: int, addr: int, offs: int, size: SizeType, burst_
     ), f"Address {addr:x} is not aligned to BurstType {burst_type!r} at size {size!r}!"
 
 
-def _bottomless(value: int) -> int:
+def _bottomless(value: int) -> Iterable[int]:
     """Bottomless Iterator."""
     while True:
         yield value
@@ -367,6 +367,8 @@ class AHBMasterDriver:
     ) -> bytearray:
         """Calculate Reference Write Data for a Burst in Bytes."""
         memimg = bytearray(blen << size)
+        if mem is not None:
+            memimg = mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)]
         allstrb = (1 << (1 << size)) - 1
         if isinstance(wdata, int):
             wdata = iter((wdata,))
@@ -383,11 +385,8 @@ class AHBMasterDriver:
             bytes = bytearray(int.to_bytes(next(wdata), 1 << size, "little"))
             strbs = next(wstrb)
             for b in range(1 << size):
-                ridx = (offs & ~mmask) + ((offs + (widx << size) + b) & mmask)
                 if strbs & 1:
                     memimg[midx + b] = bytes[b]
-                else:
-                    memimg[midx + b] = mem[ridx]
                 strbs >>= 1
         return memimg
 
