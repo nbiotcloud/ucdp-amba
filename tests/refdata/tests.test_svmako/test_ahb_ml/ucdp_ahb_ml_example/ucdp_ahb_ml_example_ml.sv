@@ -61,7 +61,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic        main_rst_an_i,              // Async Reset (Low-Active)
   // ahb_mst_ext_i: AHB Input 'ext'
   input  logic [1:0]  ahb_mst_ext_htrans_i,       // AHB Transfer Type
-  input  logic [31:0] ahb_mst_ext_haddr_i,        // AHB Bus Address
+  input  logic [35:0] ahb_mst_ext_haddr_i,        // AHB Bus Address
   input  logic [3:0]  ahb_mst_ext_hauser_i,       // AHB Address User Channel
   input  logic        ahb_mst_ext_hwrite_i,       // AHB Write Enable
   input  logic [2:0]  ahb_mst_ext_hsize_i,        // AHB Size
@@ -77,7 +77,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   output logic [31:0] ahb_mst_ext_hrdata_o,       // AHB Data
   // ahb_mst_dsp_i: AHB Input 'dsp'
   input  logic [1:0]  ahb_mst_dsp_htrans_i,       // AHB Transfer Type
-  input  logic [31:0] ahb_mst_dsp_haddr_i,        // AHB Bus Address
+  input  logic [35:0] ahb_mst_dsp_haddr_i,        // AHB Bus Address
   input  logic [3:0]  ahb_mst_dsp_hauser_i,       // AHB Address User Channel
   input  logic        ahb_mst_dsp_hwrite_i,       // AHB Write Enable
   input  logic [2:0]  ahb_mst_dsp_hsize_i,        // AHB Size
@@ -93,7 +93,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   output logic [31:0] ahb_mst_dsp_hrdata_o,       // AHB Data
   // ahb_slv_ram_o: AHB Output 'ram'
   output logic        ahb_slv_ram_hsel_o,         // AHB Slave Select
-  output logic [31:0] ahb_slv_ram_haddr_o,        // AHB Bus Address
+  output logic [35:0] ahb_slv_ram_haddr_o,        // AHB Bus Address
   output logic [3:0]  ahb_slv_ram_hauser_o,       // AHB Address User Channel
   output logic        ahb_slv_ram_hwrite_o,       // AHB Write Enable
   output logic [1:0]  ahb_slv_ram_htrans_o,       // AHB Transfer Type
@@ -113,7 +113,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic [31:0] ahb_slv_ram_hrdata_i,       // AHB Data
   // ahb_slv_periph_o: AHB Output 'periph'
   output logic        ahb_slv_periph_hsel_o,      // AHB Slave Select
-  output logic [31:0] ahb_slv_periph_haddr_o,     // AHB Bus Address
+  output logic [35:0] ahb_slv_periph_haddr_o,     // AHB Bus Address
   output logic [3:0]  ahb_slv_periph_hauser_o,    // AHB Address User Channel
   output logic        ahb_slv_periph_hwrite_o,    // AHB Write Enable
   output logic [1:0]  ahb_slv_periph_htrans_o,    // AHB Transfer Type
@@ -133,7 +133,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic [31:0] ahb_slv_periph_hrdata_i,    // AHB Data
   // ahb_slv_misc_o: AHB Output 'misc'
   output logic        ahb_slv_misc_hsel_o,        // AHB Slave Select
-  output logic [31:0] ahb_slv_misc_haddr_o,       // AHB Bus Address
+  output logic [35:0] ahb_slv_misc_haddr_o,       // AHB Bus Address
   output logic [3:0]  ahb_slv_misc_hauser_o,      // AHB Address User Channel
   output logic        ahb_slv_misc_hwrite_o,      // AHB Write Enable
   output logic [1:0]  ahb_slv_misc_htrans_o,      // AHB Transfer Type
@@ -247,8 +247,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic        mst_ext_gnt_s;
   logic [1:0]  mst_ext_htrans_s;     // AHB Transfer Type
   logic [1:0]  mst_ext_htrans_r;     // AHB Transfer Type
-  logic [31:0] mst_ext_haddr_s;      // AHB Bus Address
-  logic [31:0] mst_ext_haddr_r;      // AHB Bus Address
+  logic [35:0] mst_ext_haddr_s;      // AHB Bus Address
+  logic [35:0] mst_ext_haddr_r;      // AHB Bus Address
   logic [3:0]  mst_ext_hauser_s;     // AHB User Type
   logic [3:0]  mst_ext_hauser_r;     // AHB User Type
   logic        mst_ext_hwrite_s;     // AHB Write Enable
@@ -281,8 +281,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   logic        mst_dsp_gnt_s;
   logic [1:0]  mst_dsp_htrans_s;     // AHB Transfer Type
   logic [1:0]  mst_dsp_htrans_r;     // AHB Transfer Type
-  logic [31:0] mst_dsp_haddr_s;      // AHB Bus Address
-  logic [31:0] mst_dsp_haddr_r;      // AHB Bus Address
+  logic [35:0] mst_dsp_haddr_s;      // AHB Bus Address
+  logic [35:0] mst_dsp_haddr_r;      // AHB Bus Address
   logic [3:0]  mst_dsp_hauser_s;     // AHB User Type
   logic [3:0]  mst_dsp_hauser_r;     // AHB User Type
   logic        mst_dsp_hwrite_s;     // AHB Write Enable
@@ -334,12 +334,12 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     mst_ext_ram_sel_s = 1'b0;
     mst_ext_misc_sel_s = 1'b0;
 
-    casez (ahb_mst_ext_haddr_i[31:10])
-      22'b1111000000000000??????: begin // ram
+    casez (ahb_mst_ext_haddr_i[35:10])
+      26'b00001111000000000000??????: begin // ram
         mst_ext_ram_sel_s = 1'b1;
       end
 
-      22'b100000000000000000????, 22'b10000000000000000100??, 22'b100000000000000001010?, 22'b1000000000000000010110, 22'b11110000000000100?????: begin // misc
+      26'b0000100000000000000000????, 26'b000010000000000000000100??, 26'b0000100000000000000001010?, 26'b00001000000000000000010110, 26'b000011110000000000100?????: begin // misc
         mst_ext_misc_sel_s = 1'b1;
       end
 
@@ -624,12 +624,12 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     mst_dsp_ram_sel_s = 1'b0;
     mst_dsp_periph_sel_s = 1'b0;
 
-    casez (ahb_mst_dsp_haddr_i[31:16])
-      16'b1111000000000000: begin // ram
+    casez (ahb_mst_dsp_haddr_i[35:16])
+      20'b00001111000000000000: begin // ram
         mst_dsp_ram_sel_s = 1'b1;
       end
 
-      16'b1111000000000001: begin // periph
+      20'b00001111000000000001: begin // periph
         mst_dsp_periph_sel_s = 1'b1;
       end
 
@@ -985,7 +985,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       end
 
       default: begin
-        ahb_slv_ram_haddr_o     = 32'h00000000;
+        ahb_slv_ram_haddr_o     = 36'h000000000;
         ahb_slv_ram_hwrite_o    = ahb_write_read_e;
         ahb_slv_ram_hburst_o    = ahb_burst_single_e;
         ahb_slv_ram_hsize_o     = ahb_size_word_e;
@@ -1037,7 +1037,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       ahb_slv_periph_hnonsec_o   = ahb_mst_dsp_hnonsec_i;
       ahb_slv_periph_hready_o    = mst_dsp_hready_s;
     end else begin
-      ahb_slv_periph_haddr_o     = 32'h00000000;
+      ahb_slv_periph_haddr_o     = 36'h000000000;
       ahb_slv_periph_hwrite_o    = ahb_write_read_e;
       ahb_slv_periph_hburst_o    = ahb_burst_single_e;
       ahb_slv_periph_hsize_o     = ahb_size_word_e;
@@ -1079,7 +1079,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       ahb_slv_misc_hnonsec_o   = ahb_mst_ext_hnonsec_i;
       ahb_slv_misc_hready_o    = mst_ext_hready_s;
     end else begin
-      ahb_slv_misc_haddr_o     = 32'h00000000;
+      ahb_slv_misc_haddr_o     = 36'h000000000;
       ahb_slv_misc_hwrite_o    = ahb_write_read_e;
       ahb_slv_misc_hburst_o    = ahb_burst_single_e;
       ahb_slv_misc_hsize_o     = ahb_size_word_e;

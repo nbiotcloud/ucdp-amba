@@ -124,7 +124,12 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
 
         portname = f"ahb_mst_{name}_i"
         title = f"AHB Input {name!r}"
-        self.add_port(t.AhbMstType(proto=proto), portname, title=title, comment=title)
+        self.add_port(
+            t.AhbMstType(addrwidth=self.addrwidth, datawidth=self.datawidth, proto=proto),
+            portname,
+            title=title,
+            comment=title,
+        )
         if route:
             self.con(portname, route)
 
@@ -161,7 +166,12 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
 
         portname = f"ahb_slv_{name}_o"
         title = f"AHB Output {name!r}"
-        self.add_port(t.AhbSlvType(proto=proto), portname, title=title, comment=title)
+        self.add_port(
+            t.AhbSlvType(addrwidth=self.addrwidth, datawidth=self.datawidth, proto=proto),
+            portname,
+            title=title,
+            comment=title,
+        )
         if route:
             self.con(portname, route)
 
@@ -333,7 +343,7 @@ class UcdpAhbMlExampleMod(u.AMod):
             ausertype=MyUserType(default=2),
         )
 
-        ml = UcdpAhbMlMod(self, "u_ml", proto=ahb5f)
+        ml = UcdpAhbMlMod(self, "u_ml", addrwidth=36, proto=ahb5f)
         ml.add_master("ext")
         ml.add_master("dsp")
 
