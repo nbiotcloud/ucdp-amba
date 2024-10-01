@@ -63,6 +63,7 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic [1:0]  ahb_mst_ext_htrans_i,       // AHB Transfer Type
   input  logic [35:0] ahb_mst_ext_haddr_i,        // AHB Bus Address
   input  logic [3:0]  ahb_mst_ext_hauser_i,       // AHB Address User Channel
+  input  logic [3:0]  ahb_mst_ext_hwuser_i,       // AHB Write Data User Channel
   input  logic        ahb_mst_ext_hwrite_i,       // AHB Write Enable
   input  logic [2:0]  ahb_mst_ext_hsize_i,        // AHB Size
   input  logic [2:0]  ahb_mst_ext_hburst_i,       // AHB Burst Type
@@ -75,10 +76,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   output logic        ahb_mst_ext_hready_o,       // AHB Transfer Done
   output logic        ahb_mst_ext_hresp_o,        // AHB Response Error
   output logic [31:0] ahb_mst_ext_hrdata_o,       // AHB Data
+  output logic [3:0]  ahb_mst_ext_hruser_o,       // AHB Read Data User Channel
+  output logic [3:0]  ahb_mst_ext_hbuser_o,       // AHB Read Response User Channel
   // ahb_mst_dsp_i: AHB Input 'dsp'
   input  logic [1:0]  ahb_mst_dsp_htrans_i,       // AHB Transfer Type
   input  logic [35:0] ahb_mst_dsp_haddr_i,        // AHB Bus Address
   input  logic [3:0]  ahb_mst_dsp_hauser_i,       // AHB Address User Channel
+  input  logic [3:0]  ahb_mst_dsp_hwuser_i,       // AHB Write Data User Channel
   input  logic        ahb_mst_dsp_hwrite_i,       // AHB Write Enable
   input  logic [2:0]  ahb_mst_dsp_hsize_i,        // AHB Size
   input  logic [2:0]  ahb_mst_dsp_hburst_i,       // AHB Burst Type
@@ -91,10 +95,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   output logic        ahb_mst_dsp_hready_o,       // AHB Transfer Done
   output logic        ahb_mst_dsp_hresp_o,        // AHB Response Error
   output logic [31:0] ahb_mst_dsp_hrdata_o,       // AHB Data
+  output logic [3:0]  ahb_mst_dsp_hruser_o,       // AHB Read Data User Channel
+  output logic [3:0]  ahb_mst_dsp_hbuser_o,       // AHB Read Response User Channel
   // ahb_slv_ram_o: AHB Output 'ram'
   output logic        ahb_slv_ram_hsel_o,         // AHB Slave Select
   output logic [35:0] ahb_slv_ram_haddr_o,        // AHB Bus Address
   output logic [3:0]  ahb_slv_ram_hauser_o,       // AHB Address User Channel
+  output logic [3:0]  ahb_slv_ram_hwuser_o,       // AHB Write Data User Channel
   output logic        ahb_slv_ram_hwrite_o,       // AHB Write Enable
   output logic [1:0]  ahb_slv_ram_htrans_o,       // AHB Transfer Type
   output logic [2:0]  ahb_slv_ram_hsize_o,        // AHB Size
@@ -111,10 +118,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic        ahb_slv_ram_hresp_i,        // AHB Response Error
   input  logic        ahb_slv_ram_hexokay_i,      // AHB Exclusive Response
   input  logic [31:0] ahb_slv_ram_hrdata_i,       // AHB Data
+  input  logic [3:0]  ahb_slv_ram_hruser_i,       // AHB Read Data User Channel
+  input  logic [3:0]  ahb_slv_ram_hbuser_i,       // AHB Read Response User Channel
   // ahb_slv_periph_o: AHB Output 'periph'
   output logic        ahb_slv_periph_hsel_o,      // AHB Slave Select
   output logic [35:0] ahb_slv_periph_haddr_o,     // AHB Bus Address
   output logic [3:0]  ahb_slv_periph_hauser_o,    // AHB Address User Channel
+  output logic [3:0]  ahb_slv_periph_hwuser_o,    // AHB Write Data User Channel
   output logic        ahb_slv_periph_hwrite_o,    // AHB Write Enable
   output logic [1:0]  ahb_slv_periph_htrans_o,    // AHB Transfer Type
   output logic [2:0]  ahb_slv_periph_hsize_o,     // AHB Size
@@ -131,10 +141,13 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic        ahb_slv_periph_hresp_i,     // AHB Response Error
   input  logic        ahb_slv_periph_hexokay_i,   // AHB Exclusive Response
   input  logic [31:0] ahb_slv_periph_hrdata_i,    // AHB Data
+  input  logic [3:0]  ahb_slv_periph_hruser_i,    // AHB Read Data User Channel
+  input  logic [3:0]  ahb_slv_periph_hbuser_i,    // AHB Read Response User Channel
   // ahb_slv_misc_o: AHB Output 'misc'
   output logic        ahb_slv_misc_hsel_o,        // AHB Slave Select
   output logic [35:0] ahb_slv_misc_haddr_o,       // AHB Bus Address
   output logic [3:0]  ahb_slv_misc_hauser_o,      // AHB Address User Channel
+  output logic [3:0]  ahb_slv_misc_hwuser_o,      // AHB Write Data User Channel
   output logic        ahb_slv_misc_hwrite_o,      // AHB Write Enable
   output logic [1:0]  ahb_slv_misc_htrans_o,      // AHB Transfer Type
   output logic [2:0]  ahb_slv_misc_hsize_o,       // AHB Size
@@ -150,7 +163,9 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
   input  logic        ahb_slv_misc_hreadyout_i,   // AHB Transfer Done from Slave
   input  logic        ahb_slv_misc_hresp_i,       // AHB Response Error
   input  logic        ahb_slv_misc_hexokay_i,     // AHB Exclusive Response
-  input  logic [31:0] ahb_slv_misc_hrdata_i       // AHB Data
+  input  logic [31:0] ahb_slv_misc_hrdata_i,      // AHB Data
+  input  logic [3:0]  ahb_slv_misc_hruser_i,      // AHB Read Data User Channel
+  input  logic [3:0]  ahb_slv_misc_hbuser_i       // AHB Read Response User Channel
 );
 
 
@@ -543,18 +558,24 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_mst_ext_hrdata_o = 32'h00000000;
         ahb_mst_ext_hready_o = 1'b0;
         ahb_mst_ext_hresp_o  = ahb_resp_okay_e;
+        ahb_mst_ext_hruser_o = 4'h0;
+        ahb_mst_ext_hbuser_o = 4'h2;
       end
 
       fsm_error1_st: begin
         ahb_mst_ext_hrdata_o = 32'h00000000;
         ahb_mst_ext_hready_o = 1'b0;
         ahb_mst_ext_hresp_o  = ahb_resp_error_e;
+        ahb_mst_ext_hruser_o = 4'h0;
+        ahb_mst_ext_hbuser_o = 4'h2;
       end
 
       fsm_error2_st: begin
         ahb_mst_ext_hrdata_o = 32'h00000000;
         ahb_mst_ext_hready_o = 1'b1;
         ahb_mst_ext_hresp_o  = ahb_resp_error_e;
+        ahb_mst_ext_hruser_o = 4'h0;
+        ahb_mst_ext_hbuser_o = 4'h2;
       end
 
       fsm_error0_st, fsm_transfer_st: begin
@@ -563,18 +584,24 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             ahb_mst_ext_hrdata_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_misc_hrdata_i : 32'h00000000;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
+            ahb_mst_ext_hruser_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_misc_hruser_i : 4'h0;
+            ahb_mst_ext_hbuser_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_misc_hbuser_i : 4'h2;
           end
 
           2'b10: begin
             ahb_mst_ext_hrdata_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hrdata_i : 32'h00000000;
             ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
+            ahb_mst_ext_hruser_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hruser_i : 4'h0;
+            ahb_mst_ext_hbuser_o = (mst_ext_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hbuser_i : 4'h2;
           end
 
           default: begin
             ahb_mst_ext_hrdata_o = 32'h00000000;
             ahb_mst_ext_hready_o = 1'b1;
             ahb_mst_ext_hresp_o  = ahb_resp_okay_e;
+            ahb_mst_ext_hruser_o = 4'h0;
+            ahb_mst_ext_hbuser_o = 4'h2;
           end
         endcase
       end
@@ -585,18 +612,24 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             ahb_mst_ext_hrdata_o = ahb_slv_misc_hrdata_i;
             ahb_mst_ext_hready_o = ahb_slv_misc_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_misc_hresp_i;
+            ahb_mst_ext_hruser_o = ahb_slv_misc_hruser_i;
+            ahb_mst_ext_hbuser_o = ahb_slv_misc_hbuser_i;
           end
 
           2'b10: begin
             ahb_mst_ext_hrdata_o = ahb_slv_ram_hrdata_i;
             ahb_mst_ext_hready_o = ahb_slv_ram_hreadyout_i;
             ahb_mst_ext_hresp_o = ahb_slv_ram_hresp_i;
+            ahb_mst_ext_hruser_o = ahb_slv_ram_hruser_i;
+            ahb_mst_ext_hbuser_o = ahb_slv_ram_hbuser_i;
           end
 
           default: begin
             ahb_mst_ext_hrdata_o = 32'h00000000;
             ahb_mst_ext_hready_o = 1'b1;
             ahb_mst_ext_hresp_o  = ahb_resp_okay_e;
+            ahb_mst_ext_hruser_o = 4'h0;
+            ahb_mst_ext_hbuser_o = 4'h2;
           end
         endcase
       end
@@ -605,6 +638,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_mst_ext_hrdata_o = 32'h00000000;
         ahb_mst_ext_hready_o = 1'b1;
         ahb_mst_ext_hresp_o  = ahb_resp_okay_e;
+        ahb_mst_ext_hruser_o = 4'h0;
+        ahb_mst_ext_hbuser_o = 4'h2;
       end
     endcase
   end
@@ -833,18 +868,24 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_mst_dsp_hrdata_o = 32'h00000000;
         ahb_mst_dsp_hready_o = 1'b0;
         ahb_mst_dsp_hresp_o  = ahb_resp_okay_e;
+        ahb_mst_dsp_hruser_o = 4'h0;
+        ahb_mst_dsp_hbuser_o = 4'h2;
       end
 
       fsm_error1_st: begin
         ahb_mst_dsp_hrdata_o = 32'h00000000;
         ahb_mst_dsp_hready_o = 1'b0;
         ahb_mst_dsp_hresp_o  = ahb_resp_error_e;
+        ahb_mst_dsp_hruser_o = 4'h0;
+        ahb_mst_dsp_hbuser_o = 4'h2;
       end
 
       fsm_error2_st: begin
         ahb_mst_dsp_hrdata_o = 32'h00000000;
         ahb_mst_dsp_hready_o = 1'b1;
         ahb_mst_dsp_hresp_o  = ahb_resp_error_e;
+        ahb_mst_dsp_hruser_o = 4'h0;
+        ahb_mst_dsp_hbuser_o = 4'h2;
       end
 
       fsm_error0_st, fsm_transfer_st: begin
@@ -853,18 +894,24 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             ahb_mst_dsp_hrdata_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_periph_hrdata_i : 32'h00000000;
             ahb_mst_dsp_hready_o = ahb_slv_periph_hreadyout_i;
             ahb_mst_dsp_hresp_o = ahb_slv_periph_hresp_i;
+            ahb_mst_dsp_hruser_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_periph_hruser_i : 4'h0;
+            ahb_mst_dsp_hbuser_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_periph_hbuser_i : 4'h2;
           end
 
           2'b10: begin
             ahb_mst_dsp_hrdata_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hrdata_i : 32'h00000000;
             ahb_mst_dsp_hready_o = ahb_slv_ram_hreadyout_i;
             ahb_mst_dsp_hresp_o = ahb_slv_ram_hresp_i;
+            ahb_mst_dsp_hruser_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hruser_i : 4'h0;
+            ahb_mst_dsp_hbuser_o = (mst_dsp_hwrite_dph_r == 1'b0) ? ahb_slv_ram_hbuser_i : 4'h2;
           end
 
           default: begin
             ahb_mst_dsp_hrdata_o = 32'h00000000;
             ahb_mst_dsp_hready_o = 1'b1;
             ahb_mst_dsp_hresp_o  = ahb_resp_okay_e;
+            ahb_mst_dsp_hruser_o = 4'h0;
+            ahb_mst_dsp_hbuser_o = 4'h2;
           end
         endcase
       end
@@ -875,18 +922,24 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
             ahb_mst_dsp_hrdata_o = ahb_slv_periph_hrdata_i;
             ahb_mst_dsp_hready_o = ahb_slv_periph_hreadyout_i;
             ahb_mst_dsp_hresp_o = ahb_slv_periph_hresp_i;
+            ahb_mst_dsp_hruser_o = ahb_slv_periph_hruser_i;
+            ahb_mst_dsp_hbuser_o = ahb_slv_periph_hbuser_i;
           end
 
           2'b10: begin
             ahb_mst_dsp_hrdata_o = ahb_slv_ram_hrdata_i;
             ahb_mst_dsp_hready_o = ahb_slv_ram_hreadyout_i;
             ahb_mst_dsp_hresp_o = ahb_slv_ram_hresp_i;
+            ahb_mst_dsp_hruser_o = ahb_slv_ram_hruser_i;
+            ahb_mst_dsp_hbuser_o = ahb_slv_ram_hbuser_i;
           end
 
           default: begin
             ahb_mst_dsp_hrdata_o = 32'h00000000;
             ahb_mst_dsp_hready_o = 1'b1;
             ahb_mst_dsp_hresp_o  = ahb_resp_okay_e;
+            ahb_mst_dsp_hruser_o = 4'h0;
+            ahb_mst_dsp_hbuser_o = 4'h2;
           end
         endcase
       end
@@ -895,6 +948,8 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
         ahb_mst_dsp_hrdata_o = 32'h00000000;
         ahb_mst_dsp_hready_o = 1'b1;
         ahb_mst_dsp_hresp_o  = ahb_resp_okay_e;
+        ahb_mst_dsp_hruser_o = 4'h0;
+        ahb_mst_dsp_hbuser_o = 4'h2;
       end
     endcase
   end
@@ -1005,16 +1060,19 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
       2'b01: begin
         ahb_slv_ram_hwdata_o = ahb_mst_dsp_hwdata_i;
         ahb_slv_ram_hwstrb_o = ahb_mst_dsp_hwstrb_i;
+        ahb_slv_ram_hwuser_o = ahb_mst_dsp_hwuser_i;
       end
 
       2'b10: begin
         ahb_slv_ram_hwdata_o = ahb_mst_ext_hwdata_i;
         ahb_slv_ram_hwstrb_o = ahb_mst_ext_hwstrb_i;
+        ahb_slv_ram_hwuser_o = ahb_mst_ext_hwuser_i;
       end
 
       default: begin
         ahb_slv_ram_hwdata_o = 32'h00000000;
         ahb_slv_ram_hwstrb_o = 4'h0;
+        ahb_slv_ram_hwuser_o = 4'h5;
       end
     endcase
   end
@@ -1055,9 +1113,11 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     if (mst_dsp_periph_gnt_r == 1'b1) begin  // data phase signals
       ahb_slv_periph_hwdata_o = ahb_mst_dsp_hwdata_i;
       ahb_slv_periph_hwstrb_o = ahb_mst_dsp_hwstrb_i;
+      ahb_slv_periph_hwuser_o = ahb_mst_dsp_hwuser_i;
     end else begin
       ahb_slv_periph_hwdata_o = 32'h00000000;
       ahb_slv_periph_hwstrb_o = 4'h0;
+      ahb_slv_periph_hwuser_o = 4'h5;
     end
   end
 
@@ -1097,9 +1157,11 @@ module ucdp_ahb_ml_example_ml ( // ucdp_amba.ucdp_ahb_ml.UcdpAhbMlMod
     if (mst_ext_misc_gnt_r == 1'b1) begin  // data phase signals
       ahb_slv_misc_hwdata_o = ahb_mst_ext_hwdata_i;
       ahb_slv_misc_hwstrb_o = ahb_mst_ext_hwstrb_i;
+      ahb_slv_misc_hwuser_o = ahb_mst_ext_hwuser_i;
     end else begin
       ahb_slv_misc_hwdata_o = 32'h00000000;
       ahb_slv_misc_hwstrb_o = 4'h0;
+      ahb_slv_misc_hwuser_o = 4'h5;
     end
   end
 
