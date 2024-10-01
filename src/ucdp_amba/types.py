@@ -104,6 +104,7 @@ class AmbaProto(u.AConfig):
     Amba Protocol Version.
 
     Specification of optional/conditional Protocol Features.
+    Used for both, AHB and APB. However, features not defined for APB are simply ignored.
 
     hprotwidth (int): Bitwidth for AHB hprot signal
     has_hburst(bool): Determines whether AHB hburst signal exists (otherwise INCR only)
@@ -115,7 +116,10 @@ class AmbaProto(u.AConfig):
     has_wstrb (bool): Determines whether AHB hwstrb or APB pstrb write strobe signals exist
     has_pprot (bool): Determines whether APB pprot signal exists
     has_pnse (bool):  Determines whether APB uses Realm Management Extensions
-    ausertype (AEnumType|UintType): Type used for AHB hauser or APB pauser signal
+    ausertype (AEnumType|UintType): Type used for AHB hauser or APB pauser
+    wusertype (AEnumType|UintType): Type used for AHB hwuser or APB pwuser signal
+    rusertype (AEnumType|UintType): Type used for AHB hruser or APB pruser signal
+    busertype (AEnumType|UintType): Type used for AHB hbuser or APB pbuser signal
     """
 
     hprotwidth: int = 4
@@ -129,6 +133,9 @@ class AmbaProto(u.AConfig):
     has_pprot: bool = False
     has_pnse: bool = False
     ausertype: u.AEnumType | u.UintType | None = None
+    wusertype: u.AEnumType | u.UintType | None = None
+    rusertype: u.AEnumType | u.UintType | None = None
+    busertype: u.AEnumType | u.UintType | None = None
 
     @property
     def hprottype(self) -> AhbProtType | None:
@@ -254,13 +261,16 @@ class AhbMstType(u.AStructType):
     addrwidth: int = 32
     datawidth: int = 32
 
-    def _build(self):
+    def _build(self):  # noqa: C901
         # FWD
         self._add("htrans", AhbTransType())
         self._add("haddr", AhbAddrType(self.addrwidth))
         if ausertype := self.proto.ausertype:
             auserdoc = "AHB Address User Channel"
             self._add("hauser", ausertype, title=auserdoc, comment=auserdoc)
+        if wusertype := self.proto.wusertype:
+            wuserdoc = "AHB Write Data User Channel"
+            self._add("hwuser", wusertype, title=wuserdoc, comment=wuserdoc)
         self._add("hwrite", AhbWriteType())
         self._add("hsize", AhbSizeType())
         if self.proto.has_hburst:
@@ -284,6 +294,12 @@ class AhbMstType(u.AStructType):
         if self.proto.has_exclxfers:
             self._add("hexokay", AhbHexokType(), u.BWD)
         self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
+        if rusertype := self.proto.rusertype:
+            ruserdoc = "AHB Read Data User Channel"
+            self._add("hruser", rusertype, title=ruserdoc, comment=ruserdoc, orientation=u.BWD)
+        if busertype := self.proto.busertype:
+            buserdoc = "AHB Read Response User Channel"
+            self._add("hbuser", busertype, title=buserdoc, comment=buserdoc, orientation=u.BWD)
 
     def cast(self, other):
         """
@@ -436,13 +452,16 @@ class AhbSlvType(u.AStructType):
     addrwidth: int = 32
     datawidth: int = 32
 
-    def _build(self):
+    def _build(self):  # noqa: C901
         # FWD
         self._add("hsel", AhbSelType())
         self._add("haddr", AhbAddrType(self.addrwidth))
         if ausertype := self.proto.ausertype:
             auserdoc = "AHB Address User Channel"
             self._add("hauser", ausertype, title=auserdoc, comment=auserdoc)
+        if wusertype := self.proto.wusertype:
+            wuserdoc = "AHB Write Data User Channel"
+            self._add("hwuser", wusertype, title=wuserdoc, comment=wuserdoc)
         self._add("hwrite", AhbWriteType())
         self._add("htrans", AhbTransType())
         self._add("hsize", AhbSizeType())
@@ -470,6 +489,12 @@ class AhbSlvType(u.AStructType):
         if self.proto.has_exclxfers:
             self._add("hexokay", AhbHexokType(), u.BWD)
         self._add("hrdata", AhbDataType(self.datawidth), u.BWD)
+        if rusertype := self.proto.rusertype:
+            ruserdoc = "AHB Read Data User Channel"
+            self._add("hruser", rusertype, title=ruserdoc, comment=ruserdoc, orientation=u.BWD)
+        if busertype := self.proto.busertype:
+            buserdoc = "AHB Read Response User Channel"
+            self._add("hbuser", busertype, title=buserdoc, comment=buserdoc, orientation=u.BWD)
 
     def cast(self, other):
         """
@@ -863,6 +888,9 @@ class ApbSlvType(u.AStructType):
         if self.proto.ausertype:
             auserdoc = "APB Address User Channel"
             self._add("pauser", self.proto.ausertype, title=auserdoc, comment=auserdoc)
+        if self.proto.wusertype:
+            wuserdoc = "APB Write Data User Channel"
+            self._add("pwuser", self.proto.wusertype, title=wuserdoc, comment=wuserdoc)
         self._add("pwrite", ApbWriteType())
         self._add("pwdata", ApbDataType(self.datawidth))
         if self.proto.has_wstrb:
@@ -871,6 +899,12 @@ class ApbSlvType(u.AStructType):
         self._add("psel", ApbSelType())
         # BWD
         self._add("prdata", ApbDataType(self.datawidth), u.BWD)
+        if rusertype := self.proto.rusertype:
+            ruserdoc = "APB Read Data User Channel"
+            self._add("pruser", rusertype, title=ruserdoc, comment=ruserdoc, dir=u.BWD)
+        if busertype := self.proto.busertype:
+            buserdoc = "APB Read Response User Channel"
+            self._add("pbuser", busertype, title=buserdoc, comment=buserdoc, dir=u.BWD)
         self._add("pslverr", ApbRespType(), u.BWD)
         self._add("pready", ApbReadyType(), u.BWD)
 
@@ -1080,7 +1114,43 @@ class ApbReadyType(u.AEnumType):
 
 
 def check_ahb_proto_pair(src_name: str, src_proto: AmbaProto, tgt_name: str, tgt_proto: AmbaProto) -> int:  # noqa: C901
-    """Check AHB Protocol Compatibility."""
+    """
+    Check AHB Protocol Compatibility.
+
+    >>> p0 = AmbaProto("p0")
+    >>> p1 = AmbaProto("p1",
+    ...                 hmaster_width=3,
+    ...                 hprotwidth=0,
+    ...                 has_hburst=False,
+    ...                 has_hmastlock=False,
+    ...                 has_hnonsec=False,
+    ...                 has_exclxfers=False
+    ...               )
+    >>> p2 = AmbaProto("p2",
+    ...                hmaster_width=4,
+    ...                hprotwidth=7,
+    ...                has_hburst=True,
+    ...                has_hmastlock=True,
+    ...                has_hnonsec=True,
+    ...                has_exclxfers=True
+    ...               )
+    >>> p3 = AmbaProto("p3", ausertype=u.UintType(3))
+    >>> p4 = AmbaProto("p4", ausertype=u.UintType(4))
+    >>> check_ahb_proto_pair("src", p0, "tgt", p0)
+    0
+    >>> check_ahb_proto_pair("src", p0, "tgt", p1)
+    1
+    >>> check_ahb_proto_pair("src", p1, "tgt", p2)
+    1
+    >>> check_ahb_proto_pair("src", p2, "tgt", p1)
+    1
+    >>> check_ahb_proto_pair("src", p0, "tgt", p3)
+    1
+    >>> check_ahb_proto_pair("src", p3, "tgt", p0)
+    1
+    >>> check_ahb_proto_pair("src", p3, "tgt", p4)
+    2
+    """
     if src_proto == tgt_proto:  # no need to check
         return 0
 
@@ -1099,28 +1169,29 @@ def check_ahb_proto_pair(src_name: str, src_proto: AmbaProto, tgt_name: str, tgt
     preamble = pre1 + pre2
     LOGGER.info(f"Checking {preamble}.")
 
-    if (
-        src_proto.ausertype is not None
-        and tgt_proto.ausertype is not None
-        and src_proto.ausertype != tgt_proto.ausertype
-    ):
-        LOGGER.error(f"{preamble}: Incompatible Definitions for 'hauser'!")
-        verdict = 2
-    elif src_proto.ausertype is not None and tgt_proto.ausertype is None:
+    for usrtp in ["auser", "wuser", "ruser", "buser"]:
+        tname = f"{usrtp}type"
+        src_usertp = src_proto.__dict__[tname]
+        tgt_usertp = tgt_proto.__dict__[tname]
+        if (src_usertp is not None and tgt_usertp is not None and src_usertp != tgt_usertp):
+            LOGGER.error(f"{preamble}: Incompatible Definitions for 'h{usrtp}'!")
+            verdict = 2
+
+    if src_proto.ausertype is not None and tgt_proto.ausertype is None:
         LOGGER.warning(f"{preamble}: Ignoring source 'hauser'.")
-        verdict = 1
+        verdict = max(verdict, 1)
     elif src_proto.ausertype is None and tgt_proto.ausertype is not None:
         LOGGER.warning(f"{preamble}: Clamping target 'hauser'.")
-        verdict = 1
+        verdict = max(verdict, 1)
     if src_proto.hprotwidth > 0 and tgt_proto.hprotwidth == 0:
         LOGGER.warning(f"{preamble}: Ignoring source 'hprot'.")
-        verdict = 1
+        verdict = max(verdict, 1)
     elif src_proto.hprotwidth == 0 and tgt_proto.hprotwidth > 0:
         LOGGER.warning(f"{preamble}: Clamping target 'hprot'.")
-        verdict = 1
+        verdict = max(verdict, 1)
     elif src_proto.hprotwidth != tgt_proto.hprotwidth:
         LOGGER.warning(f"{preamble}: Different width for 'hprot' signals.")
-        verdict = 1
+        verdict = max(verdict, 1)
     if src_proto.hmaster_width > tgt_proto.hmaster_width:
         slc = "MSBs of " if tgt_proto.hmaster_width else ""
         LOGGER.warning(f"{preamble}: Ignoring {slc}source 'hmaster'.")
