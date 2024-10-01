@@ -409,7 +409,8 @@ ${self.usertp_hdl("hbuser", rslvr, conv_spec)}
       kk = rslvr.get_default(key) if utp in ["u2u", "u2e"] else f"{snd}_{usrsig}_{key}_e"
       vv = rslvr.get_default(value) if utp in ["u2u", "e2u"] else f"{rcv}_{usrsig}_{value}_e"
       casemap[kk] = vv
-    dflt = rslvr.get_default(cspec["map"][None]) if utp in ["u2u", "e2u"] else f"{rcv}_{usrsig}_{cspec["map"][None]}_e"
+    defval = cspec["map"][None]
+    dflt = rslvr.get_default(defval) if utp in ["u2u", "e2u"] else f"{rcv}_{usrsig}_{defval}_e"
 %>\
   // map ${usrsig} values
   always_comb begin: proc_${usrsig}_mux
