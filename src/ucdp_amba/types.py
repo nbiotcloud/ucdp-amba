@@ -1113,7 +1113,7 @@ class ApbReadyType(u.AEnumType):
 #         self._add(1, "idle", "Idle")
 
 
-def check_ahb_proto_pair(src_name: str, src_proto: AmbaProto, tgt_name: str, tgt_proto: AmbaProto) -> int:  # noqa: C901
+def check_ahb_proto_pair(src_name: str, src_proto: AmbaProto, tgt_name: str, tgt_proto: AmbaProto) -> int:  # noqa: C901, PLR0912
     """
     Check AHB Protocol Compatibility.
 
@@ -1173,7 +1173,7 @@ def check_ahb_proto_pair(src_name: str, src_proto: AmbaProto, tgt_name: str, tgt
         tname = f"{usrtp}type"
         src_usertp = src_proto.__dict__[tname]
         tgt_usertp = tgt_proto.__dict__[tname]
-        if (src_usertp is not None and tgt_usertp is not None and src_usertp != tgt_usertp):
+        if src_usertp is not None and tgt_usertp is not None and src_usertp != tgt_usertp:
             LOGGER.error(f"{preamble}: Incompatible Definitions for 'h{usrtp}'!")
             verdict = 2
 
