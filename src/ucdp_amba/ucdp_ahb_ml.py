@@ -236,7 +236,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
             mst_hmasterwidth = min(master.proto.hmaster_width, slv_hmasterwidth)
             mstp_type = self.ports[f"ahb_mst_{master.name}_i"].type_
             for subt in mstp_type.values():
-                if (subt.orientation == u.BWD) or (subt.name in ["hwdata", "hwstrb"]):
+                if (subt.orientation == u.BWD) or (subt.name in ["hwdata", "hwstrb", "hwuser"]):
                     continue
                 type_ = subt.type_
                 if subt.name == "hprot":
@@ -324,13 +324,16 @@ class UcdpAhbMlExampleMod(u.AMod):
 
         ahb5f = t.AmbaProto(
             "ahb5f",
-            ausertype=MyUserType(default=2),
             hmaster_width=4,
             hprotwidth=4,
             has_hmastlock=True,
             has_hnonsec=True,
             has_exclxfers=False,
             has_wstrb=True,
+            ausertype=MyUserType(default=2),
+            wusertype=MyUserType(default=5),
+            rusertype=MyUserType(default=0),
+            busertype=MyUserType(default=2),
         )
         ahb5v = ahb5f.new(
             name="ahb5v",
@@ -341,6 +344,9 @@ class UcdpAhbMlExampleMod(u.AMod):
             has_hnonsec=True,
             has_exclxfers=True,
             ausertype=MyUserType(default=2),
+            wusertype=MyUserType(default=5),
+            rusertype=MyUserType(default=0),
+            busertype=MyUserType(default=2),
         )
 
         ml = UcdpAhbMlMod(self, "u_ml", addrwidth=36, proto=ahb5f)

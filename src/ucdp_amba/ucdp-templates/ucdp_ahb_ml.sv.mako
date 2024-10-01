@@ -122,6 +122,9 @@ ${parent.logic(indent=indent, skip=skip)}
   slv_hnonsec = False
   slv_hexclxfers = False
   slv_hauser = False
+  slv_hwuser = False
+  slv_hruser = False
+  slv_hbuser = False
   for slavename in master_slaves:
     slvproto = mod.slaves[slavename].proto
 
@@ -132,6 +135,9 @@ ${parent.logic(indent=indent, skip=skip)}
     slv_hnonsec = slv_hnonsec or slvproto.has_hnonsec
     slv_hexclxfers = slv_hexclxfers or slvproto.has_exclxfers
     slv_hauser = slv_hauser or (slvproto.ausertype is not None)
+    slv_hwuser = slv_hwuser or (slvproto.wusertype is not None)
+    slv_hruser = slv_hruser or (slvproto.rusertype is not None)
+    slv_hbuser = slv_hbuser or (slvproto.busertype is not None)
 
   mst_hprot = proto_opt(mst_proto.hprotwidth, slv_hprotwidth)
   mst_hmastlock = proto_opt(mst_proto.has_hmastlock, slv_hmastlock)
@@ -141,6 +147,9 @@ ${parent.logic(indent=indent, skip=skip)}
   mst_hexcl = proto_opt(mst_proto.has_exclxfers, slv_hexclxfers)
   mst_hexok = proto_opt(slv_hexclxfers, mst_proto.has_exclxfers)  # deliberately swapped src/tgt
   mst_hauser = proto_opt(mst_proto.ausertype is not None, slv_hauser)
+  mst_hwuser = proto_opt(mst_proto.wusertype is not None, slv_hwuser)
+  mst_hruser = proto_opt(slv_hruser, mst_proto.rusertype is not None)  # deliberately swapped src/tgt
+  mst_hbuser = proto_opt(slv_hbuser, mst_proto.busertype is not None)  # deliberately swapped src/tgt
 %>\
   // Master '${master.name}' Logic
   always_comb begin: proc_${master.name}_logic
@@ -444,6 +453,12 @@ ${reqkeep.get()}
 %   if (mst_hexok != "ign") and (mst_hexok != "tie"):
         ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
 %   endif
+%   if (mst_hruser != "ign") and (mst_hruser != "tie"):
+        ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%   endif
+%   if (mst_hbuser != "ign") and (mst_hbuser != "tie"):
+        ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
+%   endif
       end
 
       fsm_error1_st: begin
@@ -453,6 +468,12 @@ ${reqkeep.get()}
 %   if (mst_hexok != "ign") and (mst_hexok != "tie"):
         ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
 %   endif
+%   if (mst_hruser != "ign") and (mst_hruser != "tie"):
+        ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%   endif
+%   if (mst_hbuser != "ign") and (mst_hbuser != "tie"):
+        ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
+%   endif
       end
 
       fsm_error2_st: begin
@@ -461,6 +482,12 @@ ${reqkeep.get()}
         ahb_mst_${master.name}_hresp_o  = ahb_resp_error_e;
 %   if (mst_hexok != "ign") and (mst_hexok != "tie"):
         ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
+%   endif
+%   if (mst_hruser != "ign") and (mst_hruser != "tie"):
+        ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%   endif
+%   if (mst_hbuser != "ign") and (mst_hbuser != "tie"):
+        ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
 %   endif
       end
 
@@ -472,12 +499,20 @@ ${reqkeep.get()}
 %     if mst_hexok == "fwd":
         ahb_mst_${master.name}_hexokay_o = ahb_slv_${sole_slv}_hexokay_i;
 %     endif
+%     if mst_hruser == "fwd":
+        ahb_mst_${master.name}_hruser_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${sole_slv}_hruser_i : ${rslvr.get_default(mst_proto.rusertype)};
+%     endif
+%     if mst_hbuser == "fwd":
+        ahb_mst_${master.name}_hbuser_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${sole_slv}_hbuser_i : ${rslvr.get_default(mst_proto.busertype)};
+%     endif
 %   else:
         case ({${mux_cond}})
 %     for idx, slave in enumerate(reversed(master_slaves)):
 <%
         slv_proto = mod.slaves[slave].proto
-        slv_hexok = proto_opt(slv_proto.has_exclxfers, mst_proto.has_exclxfers)  # deliberately reversed src/tgt
+        slv_hexok = proto_opt(slv_proto.has_exclxfers, mst_proto.has_exclxfers)  # deliberately swapped src/tgt
+        slv_hruser = proto_opt(slv_proto.rusertype is not None, mst_proto.rusertype is not None)  # deliberately swapped src/tgt
+        slv_hbuser = proto_opt(slv_proto.busertype is not None, mst_proto.busertype is not None)  # deliberately swapped src/tgt
 %>\
           ${num_slaves}'b${f"{1<<idx:0{num_slaves}b}"}: begin
             ahb_mst_${master.name}_hrdata_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${slave}_hrdata_i : ${rslvr._get_uint_value(0, mod.datawidth)};
@@ -485,6 +520,12 @@ ${reqkeep.get()}
             ahb_mst_${master.name}_hresp_o = ahb_slv_${slave}_hresp_i;
 %       if slv_hexok == "fwd":
             ahb_mst_${master.name}_hexokay_o = ahb_slv_${slave}_hexokay_i;
+%       endif
+%       if slv_hruser == "fwd":
+            ahb_mst_${master.name}_hruser_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${slave}_hruser_i : ${rslvr.get_default(mst_proto.rusertype)};
+%       endif
+%       if slv_hbuser == "fwd":
+            ahb_mst_${master.name}_hbuser_o = (mst_${master.name}_hwrite_dph_r == 1'b0) ? ahb_slv_${slave}_hbuser_i : ${rslvr.get_default(mst_proto.busertype)};
 %       endif
           end
 
@@ -495,6 +536,12 @@ ${reqkeep.get()}
             ahb_mst_${master.name}_hresp_o  = ahb_resp_okay_e;
 %     if (mst_hexok != "ign") and (mst_hexok != "tie"):
             ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
+%     endif
+%     if (mst_hruser != "ign") and (mst_hruser != "tie"):
+            ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%     endif
+%     if (mst_hbuser != "ign") and (mst_hbuser != "tie"):
+            ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
 %     endif
           end
         endcase
@@ -509,12 +556,20 @@ ${reqkeep.get()}
 %     if mst_hexok == "fwd":
         ahb_mst_${master.name}_hexokay_o = ahb_slv_${sole_slv}_hexokay_i;
 %     endif
+%     if mst_hruser == "fwd":
+        ahb_mst_${master.name}_hruser_o = ahb_slv_${sole_slv}_hruser_i;
+%     endif
+%     if mst_hbuser == "fwd":
+        ahb_mst_${master.name}_hbuser_o = ahb_slv_${sole_slv}_hbuser_i;
+%     endif
 %   else:
         case ({${mux_cond}})
 %     for idx, slave in enumerate(reversed(master_slaves)):
 <%
         slv_proto = mod.slaves[slave].proto
-        slv_hexok = proto_opt(slv_proto.has_exclxfers, mst_proto.has_exclxfers)  # deliberately reversed src/tgt
+        slv_hexok = proto_opt(slv_proto.has_exclxfers, mst_proto.has_exclxfers)  # deliberately swapped src/tgt
+        slv_hruser = proto_opt(slv_proto.rusertype is not None, mst_proto.rusertype is not None)  # deliberately swapped src/tgt
+        slv_hbuser = proto_opt(slv_proto.busertype is not None, mst_proto.busertype is not None)  # deliberately swapped src/tgt
 %>\
           ${num_slaves}'b${f"{1<<idx:0{num_slaves}b}"}: begin
             ahb_mst_${master.name}_hrdata_o = ahb_slv_${slave}_hrdata_i;
@@ -522,6 +577,12 @@ ${reqkeep.get()}
             ahb_mst_${master.name}_hresp_o = ahb_slv_${slave}_hresp_i;
 %       if slv_hexok == "fwd":
             ahb_mst_${master.name}_hexokay_o = ahb_slv_${slave}_hexokay_i;
+%       endif
+%       if slv_hruser == "fwd":
+            ahb_mst_${master.name}_hruser_o = ahb_slv_${slave}_hruser_i;
+%       endif
+%       if slv_hbuser == "fwd":
+            ahb_mst_${master.name}_hbuser_o = ahb_slv_${slave}_hbuser_i;
 %       endif
           end
 
@@ -532,6 +593,12 @@ ${reqkeep.get()}
             ahb_mst_${master.name}_hresp_o  = ahb_resp_okay_e;
 %     if (mst_hexok != "ign") and (mst_hexok != "tie"):
             ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
+%     endif
+%     if (mst_hruser != "ign") and (mst_hruser != "tie"):
+            ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%     endif
+%     if (mst_hbuser != "ign") and (mst_hbuser != "tie"):
+            ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
 %     endif
           end
         endcase
@@ -545,11 +612,23 @@ ${reqkeep.get()}
 %   if (mst_hexok != "ign") and (mst_hexok != "tie"):
         ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
 %   endif
+%   if (mst_hruser != "ign") and (mst_hruser != "tie"):
+        ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%   endif
+%   if (mst_hbuser != "ign") and (mst_hbuser != "tie"):
+        ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
+%   endif
       end
     endcase
 %   if mst_hexok == "tie":
 
     ahb_mst_${master.name}_hexokay_o = ahb_hexok_error_e;
+%   endif
+%   if mst_hruser == "tie":
+    ahb_mst_${master.name}_hruser_o = ${rslvr.get_default(mst_proto.rusertype)};
+%   endif
+%   if mst_hbuser == "tie":
+    ahb_mst_${master.name}_hbuser_o = ${rslvr.get_default(mst_proto.busertype)};
 %   endif
   end
 
@@ -581,6 +660,7 @@ ${reqkeep.get()}
   slv_hexcl = proto_opt(mst_proto.has_exclxfers, slv_proto.has_exclxfers)
   slv_hwstrb = proto_opt(mst_proto.has_wstrb, slv_proto.has_wstrb)
   slv_hauser = proto_opt(mst_proto.ausertype is not None, slv_proto.ausertype is not None)
+  slv_hwuser = proto_opt(mst_proto.wusertype is not None, slv_proto.wusertype is not None)
 %>\
   // Slave '${slave.name}': no arbitration necessary
   always_comb begin: proc_${slave.name}_asgn
@@ -682,15 +762,24 @@ ${reqkeep.get()}
 %     if slv_hwstrb == "fwd":
       ahb_slv_${slave.name}_hwstrb_o = ahb_mst_${sole_mst}_hwstrb_i;
 %     endif
+%     if slv_hwuser == "fwd":
+      ahb_slv_${slave.name}_hwuser_o = ahb_mst_${sole_mst}_hwuser_i;
+%     endif
     end else begin
       ahb_slv_${slave.name}_hwdata_o = ${rslvr._get_uint_value(0, mod.datawidth)};
 %     if slv_hwstrb == "fwd":
       ahb_slv_${slave.name}_hwstrb_o = ${rslvr._get_uint_value(0, mod.datawidth // 8)};
 %     endif
+%     if slv_hwuser == "fwd":
+      ahb_slv_${slave.name}_hwuser_o = ${rslvr.get_default(slv_proto.wusertype)};
+%     endif
     end
 %     if slv_hwstrb == "tie":
 
     ahb_slv_${slave.name}_hwstrb_o = ${rslvr._get_uint_value(0, mod.datawidth // 8)};
+%     endif
+%     if slv_hwuser == "tie":
+    ahb_slv_${slave.name}_hwuser_o = ${rslvr.get_default(slv_proto.wusertype)};
 %     endif
   end
 
@@ -715,6 +804,7 @@ ${reqkeep.get()}
   mst_hexcl = False
   mst_hwstrb = False
   mst_hauser = False
+  mst_hwuser = False
   for master in slave_masters:
     mst_proto = mod.masters[master].proto
     mst_hprotwidth = max(mst_hprotwidth, mst_proto.hprotwidth)
@@ -725,6 +815,7 @@ ${reqkeep.get()}
     mst_hexcl = mst_hexcl or mst_proto.has_exclxfers
     mst_hwstrb = mst_hwstrb or mst_proto.has_wstrb
     mst_hauser = mst_hauser or mst_proto.ausertype is not None
+    mst_hwuser = mst_hwuser or mst_proto.wusertype is not None
 
     slv_sel.add_row(f"slv_{slave.name}_{master}_sel_s", "=", f"slv_{slave.name}_{master}_gnt_s |")
     slv_sel.add_row("", "", f"(mst_{master}_{slave.name}_keep_s & mst_{master}_{slave.name}_gnt_r);")
@@ -739,6 +830,7 @@ ${reqkeep.get()}
   slv_hexcl = proto_opt(mst_hexcl, slv_proto.has_exclxfers)
   slv_hwstrb = proto_opt(mst_hwstrb, slv_proto.has_wstrb)
   slv_hauser = proto_opt(mst_hauser, slv_proto.ausertype is not None)
+  slv_hwuser = proto_opt(mst_hwuser, slv_proto.wusertype is not None)
 %>\
   // // Slave '${slave.name}' round-robin arbiter
   always_comb begin: proc_${slave.name}_rr_arb
@@ -927,6 +1019,7 @@ ${slv_sel.get()}
 <%
          mst_proto = mod.masters[master].proto
          mst_hwstrb = proto_opt(mst_proto.has_wstrb, slv_proto.has_wstrb)
+         mst_hwuser = proto_opt(mst_proto.wusertype is not None, slv_proto.wusertype is not None)
 %>\
       ${num_masters}'b${f"{1<<idx:0{num_masters}b}"}: begin
         ahb_slv_${slave.name}_hwdata_o = ahb_mst_${master}_hwdata_i;
@@ -937,6 +1030,13 @@ ${slv_sel.get()}
         ahb_slv_${slave.name}_hwstrb_o = ${rslvr._get_uint_value(0, mod.datawidth // 8)};
 %         endif
 %       endif
+%       if slv_hwuser == "fwd":
+%         if mst_hwuser == "fwd":
+        ahb_slv_${slave.name}_hwuser_o = ahb_mst_${master}_hwuser_i;
+%         else:
+        ahb_slv_${slave.name}_hwuser_o = ${rslvr.get_default(slv_proto.wusertype)};
+%         endif
+%       endif
       end
 
 %     endfor
@@ -945,12 +1045,18 @@ ${slv_sel.get()}
 %     if slv_hwstrb == "fwd":
         ahb_slv_${slave.name}_hwstrb_o = ${rslvr._get_uint_value(0, mod.datawidth // 8)};
 %     endif
+%     if mst_hwuser == "fwd":
+        ahb_slv_${slave.name}_hwuser_o = ${rslvr.get_default(slv_proto.wusertype)};
+%     endif
       end
     endcase
 %    if slv_hwstrb == "tie":
 
     ahb_slv_${slave.name}_hwstrb_o = ${rslvr._get_uint_value(0, mod.datawidth // 8)};
 %    endif
+%     if slv_hwuser == "tie":
+    ahb_slv_${slave.name}_hwuser_o = ${rslvr.get_default(slv_proto.wusertype)};
+%     endif
   end
 
 %   endif
