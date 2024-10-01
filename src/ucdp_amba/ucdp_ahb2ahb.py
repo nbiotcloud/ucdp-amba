@@ -28,7 +28,7 @@ Unified Chip Design Platform - AMBA - AHB Bus Converter.
 
 import enum
 from logging import getLogger
-from typing import ClassVar, NamedTuple
+from typing import Any, ClassVar, NamedTuple
 
 import ucdp as u
 from aligntext import Align, center, left
@@ -85,11 +85,11 @@ class UcdpAhb2ahbMod(u.ATailoredMod):
         ),
     )
 
-    source_type: t.AhbMstType | t.AhbSlvType | None = None
-    target_type: t.AhbMstType | t.AhbSlvType | None = None
+    source_type: t.AhbMstType | t.AhbSlvType
+    target_type: t.AhbMstType | t.AhbSlvType
     async_conv: bool = False
-    _conv_spec: dict[str, any] = u.PrivateField(default_factory=dict)
-    __ext_param: dict[str, any] = u.PrivateField(default_factory=dict)
+    _conv_spec: dict[str, Any] = u.PrivateField(default_factory=dict)
+    __ext_param: dict[str, Any] = u.PrivateField(default_factory=dict)
 
     def _get_usertype_width(self, usertpye) -> int:
         if usertpye is None:
