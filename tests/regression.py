@@ -61,6 +61,17 @@ ahb2apb_fl = [
     f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_odd.sv",
 ]
 
+ahb2ahb_fl = []
+for srctt in ["mst", "slv"]:
+    for tgttt in ["mst", "slv"]:
+        for srcp in ["minp", "smlp", "lrgp"]:
+            for tgtp in ["minp", "smlp", "lrgp"]:
+                for extn in ["n", "p", "s"]:
+                    mname = f"ucdp_ahb2ahb_example_{srctt}2{tgttt}_{srcp}_{tgtp}_{extn}.sv"
+                    ahb2ahb_fl.append(
+                        f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2ahb/ucdp_ahb2ahb_example/{mname}"
+                    )
+
 tests = [
     ("compile_test", "ucdp_ahb_ml_example_ml", ml_fl),
     ("compile_test", "ucdp_apb2mem_example_a2m", apb2mem_fl),
@@ -68,8 +79,10 @@ tests = [
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
+    ("compile_test", "ucdp_ahb2ahb_example_mst2mst_lrgp_lrgp_n", ahb2ahb_fl),
     ("ahb_ml_test", "ucdp_ahb_ml_example_ml", ml_fl),
     ("ahb2apb_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
+    # ("ahb2ahb_test", "ucdp_ahb2ahb_example_mst2mst_lrgp_lrgp_n", ahb2ahb_fl),
 ]
 
 

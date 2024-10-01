@@ -52,3 +52,11 @@ def test_apb2mem(tmp_path):
     with mock.patch.dict(os.environ, {"PRJROOT": str(tmp_path)}):
         u.generate(top.mod, "hdl")
     assert_refdata(test_apb2mem, tmp_path)
+
+
+def test_ahb2ahb(tmp_path):
+    """AHB2AHB Module."""
+    top = u.load("ucdp_amba.ucdp_ahb2ahb")
+    with mock.patch.dict(os.environ, {"PRJROOT": str(tmp_path)}):
+        u.generate(top.mod, "hdl")
+    assert_refdata(test_ahb2ahb, tmp_path)
