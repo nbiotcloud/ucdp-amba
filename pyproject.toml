@@ -24,7 +24,7 @@
 
 [project]
 name = "ucdp-amba"
-version = "0.7.0"
+dynamic = ["version"]
 description = "Unified Chip Design Platform - AMBA"
 readme = "README.md"
 authors = [
@@ -48,6 +48,9 @@ dependencies = [
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
+
+[tool.pdm.version]
+source = "scm"
 
 [tool.pdm]
 [tool.pdm.dev-dependencies]
