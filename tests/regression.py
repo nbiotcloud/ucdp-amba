@@ -61,6 +61,17 @@ ahb2apb_fl = [
     f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2apb/ucdp_ahb2apb_example/ucdp_ahb2apb_example_odd.sv",
 ]
 
+ahb2ahb_fl = []
+for srctt in ["mst", "slv"]:
+    for tgttt in ["mst", "slv"]:
+        for srcp in ["minp", "smlp", "lrgp"]:
+            for tgtp in ["minp", "smlp", "lrgp"]:
+                for extn in ["n", "p", "s"]:
+                    mname = f"ucdp_ahb2ahb_example_{srctt}2{tgttt}_{srcp}_{tgtp}_{extn}.sv"
+                    ahb2ahb_fl.append(
+                        f"{prjroot}/tests/refdata/tests.test_svmako/test_ahb2ahb/ucdp_ahb2ahb_example/{mname}"
+                    )
+
 tests = [
     ("compile_test", "ucdp_ahb_ml_example_ml", ml_fl),
     ("compile_test", "ucdp_apb2mem_example_a2m", apb2mem_fl),
@@ -68,7 +79,10 @@ tests = [
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_ahb2apb_amba5_errirqfalse", ahb2apb_fl),
     ("compile_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
+    ("compile_test", "ucdp_ahb2ahb_example_mst2mst_lrgp_lrgp_n", ahb2ahb_fl),
     ("ahb_ml_test", "ucdp_ahb_ml_example_ml", ml_fl),
+    ("ahb2apb_test", "ucdp_ahb2apb_example_odd", ahb2apb_fl),
+    # ("ahb2ahb_test", "ucdp_ahb2ahb_example_mst2mst_lrgp_lrgp_n", ahb2ahb_fl),
 ]
 
 
@@ -92,6 +106,7 @@ def test_generic(test):
         waves=waves,
         gui=gui,
         make_args=["PYTHON3=python3"],
+        plus_args=["--trace"],
     )
 
     # gui param above does nothing for verilator as the handling is a bit special, so we do it here
@@ -109,16 +124,16 @@ def test_generic(test):
             restore = str(restore_path)
         else:
             restore = ""
-        subprocess.check_call(
-            [
-                "gtkwave",
-                "-t",
-                f"{sim_build}/{top}.stems",
-                "-f",
-                f"{sim_build}/dump.fst",
-                "-a" if restore else "",
-                restore,
-                "-r",
-                ".gtkwaverc",
-            ]
-        )
+        cmd = [
+            "gtkwave",
+            "-t",
+            f"{sim_build}/{top}.stems",
+            "-f",
+            f"{sim_build}/dump.fst",
+            "-r",
+            ".gtkwaverc",
+        ]
+        if restore:
+            cmd.append("-a")
+            cmd.append(restore)
+        subprocess.check_call(cmd)

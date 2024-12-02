@@ -36,26 +36,6 @@ from cocotb.triggers import Combine, RisingEdge
 from tests.ahb_driver import AHBMasterDriver, AHBSlaveDriver, BurstType, SizeType
 
 
-def _calc_wrmem(offs: int, size: SizeType, blen: int, mmask: int, wdata: list[int]) -> bytearray:
-    """Calculate Reference Write Data in Bytes."""
-    memimg = bytearray(blen << size)
-    for widx in range(blen):
-        midx = (offs + (widx << size)) & mmask
-        memimg[midx : (midx + (1 << size))] = int.to_bytes(wdata[widx], 1 << size, "little")
-    return memimg
-
-
-def _calc_expected(offs: int, size: SizeType, blen: int, mmask: int, mem: bytearray) -> list[int]:
-    """Calculate Expected Read Data."""
-    xdata = []
-    for widx in range(blen):
-        xd = 0
-        for bidx in range(1 << size):
-            xd |= mem[(offs & ~mmask) + ((offs + (widx << size) + bidx) & mmask)] << (bidx << 3)
-        xdata.append(xd)
-    return xdata
-
-
 # TODO put this is a generic tb lib
 async def wait_clocks(clock, cycles):
     """Helper Function."""
@@ -78,8 +58,11 @@ async def ahb_ml_test(dut):
         clk=hclk,
         rst_an=rst_an,
         haddr=dut.ahb_mst_ext_haddr_i,
+        hauser=dut.ahb_mst_ext_hauser_i,
+        hmaster=dut.ahb_mst_ext_hmaster_i,
         hwrite=dut.ahb_mst_ext_hwrite_i,
         hwdata=dut.ahb_mst_ext_hwdata_i,
+        hwstrb=dut.ahb_mst_ext_hwstrb_i,
         htrans=dut.ahb_mst_ext_htrans_i,
         hburst=dut.ahb_mst_ext_hburst_i,
         hsize=dut.ahb_mst_ext_hsize_i,
@@ -96,8 +79,10 @@ async def ahb_ml_test(dut):
         clk=hclk,
         rst_an=rst_an,
         haddr=dut.ahb_mst_dsp_haddr_i,
+        hmaster=dut.ahb_mst_dsp_hmaster_i,
         hwrite=dut.ahb_mst_dsp_hwrite_i,
         hwdata=dut.ahb_mst_dsp_hwdata_i,
+        hwstrb=dut.ahb_mst_dsp_hwstrb_i,
         htrans=dut.ahb_mst_dsp_htrans_i,
         hburst=dut.ahb_mst_dsp_hburst_i,
         hsize=dut.ahb_mst_dsp_hsize_i,
@@ -115,7 +100,10 @@ async def ahb_ml_test(dut):
         rst_an=rst_an,
         hsel=dut.ahb_slv_ram_hsel_o,
         haddr=dut.ahb_slv_ram_haddr_o,
+        hauser=dut.ahb_slv_ram_hauser_o,
+        hmaster=dut.ahb_slv_ram_hmaster_o,
         hwrite=dut.ahb_slv_ram_hwrite_o,
+        hwstrb=dut.ahb_slv_ram_hwstrb_o,
         htrans=dut.ahb_slv_ram_htrans_o,
         hsize=dut.ahb_slv_ram_hsize_o,
         hburst=dut.ahb_slv_ram_hburst_o,
@@ -131,6 +119,9 @@ async def ahb_ml_test(dut):
 
     cocotb.start_soon(ram_slv.run())
 
+    hauser_width = len(ext_mst.hauser) if ext_mst.hauser else 0
+    hmaster_width = len(ext_mst.hmaster) if ext_mst.hmaster else 0
+
     # initial reset
     rst_an.value = 0
     await wait_clocks(hclk, 10)
@@ -142,11 +133,13 @@ async def ahb_ml_test(dut):
 
     ext_wr = cocotb.start_soon(ext_mst.write(0xF0000300, 0x76543210))
     dsp_wr = cocotb.start_soon(
-        dsp_mst.write(0xF0000316, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD)
+        dsp_mst.write(
+            0xF0000316, (0x11, 0x22, 0x33, 0x44), burst_type=BurstType.WRAP4, size=SizeType.HALFWORD, hmaster=5
+        )
     )
     await Combine(ext_wr, dsp_wr)
     await wait_clocks(hclk, 5)
-    ram_slv.log_data()
+    # ram_slv.log_data()
 
     # ext_wr = cocotb.start_soon(ext_mst.write(0xF0000000, 0x76543210))
     # dsp_wr = cocotb.start_soon(
@@ -183,21 +176,31 @@ async def ahb_ml_test(dut):
 
         if btype in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4):
             offs &= ~mmask  # make it burst aligned
-        smax = (1 << (1 << (size + 3))) - 1  # max value according to size
+        valmax = (1 << (1 << (size + 3))) - 1  # max value according to size
+        strbmax = (1 << (1 << size)) - 1
+        hauser = random.randint(1, (1 << hauser_width) - 1)
+        hmaster = random.randint(1, (1 << hmaster_width) - 1)
         if random.randint(0, 1):
-            wdata = [random.randint(1, smax) for i in range(blen)]
+            wdata = [random.randint(1, valmax) for i in range(blen)]
+            wstrb = [random.randint(1, strbmax) for i in range(blen)]
 
-            mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = _calc_wrmem(
-                offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata
+            mem[(offs & ~mmask) : (offs & ~mmask) + (blen << size)] = ext_mst.calc_wrmem(
+                offs=offs, size=size, blen=blen, mmask=mmask, wdata=wdata, wstrb=wstrb, mem=mem
             )
             log.info(
                 f"=MST WRITE TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name}; "
-                f"wdata:{[hex(w) for w in wdata]}"
+                f"wdata:{[hex(w) for w in wdata]}; wstrb:{[hex(w) for w in wstrb]}"
             )
-            await ext_mst.write(0xF0000000 + offs, wdata, burst_type=btype, size=size)
+            err_resp = await ext_mst.write(
+                0xF0000000 + offs, wdata, wstrb=wstrb, burst_type=btype, size=size, hauser=hauser, hmaster=hmaster
+            )
+            assert not err_resp, "Unexpected error response"
         else:
-            xdata = _calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
-            rdata = await ext_mst.read(0xF0000000 + offs, burst_type=btype, size=size)
+            xdata = ext_mst.calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem)
+            err_resp, rdata = await ext_mst.read(
+                0xF0000000 + offs, burst_type=btype, size=size, hauser=hauser, hmaster=hmaster
+            )
+            assert not err_resp, "Unexpected error response"
             if tuple(rdata) == tuple(xdata):
                 log.info(
                     f"=MST READ TRANSFER= offs:{hex(offs)}; burst:{btype.name}; size:{size.name};\n"
