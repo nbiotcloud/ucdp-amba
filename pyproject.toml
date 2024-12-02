@@ -24,7 +24,7 @@
 
 [project]
 name = "ucdp-amba"
-version = ["dynamic"]
+dynamic = ["version"]
 description = "Unified Chip Design Platform - AMBA"
 readme = "README.md"
 authors = [
