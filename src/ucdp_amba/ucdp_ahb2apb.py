@@ -82,12 +82,14 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
 
     >>> ahb2apb = Mod().get_inst("u_ahb2apb")
     >>> print(ahb2apb.get_overview())
-    Size: 8 KB
+    Top:     None
+    Defines: None
+    Size:    8 KB
     <BLANKLINE>
-    | Addrspace | Type  | Base    | Size           | Attributes |
-    | --------- | ----  | ----    | ----           | ---------- |
-    | uart      | Slave | +0x0    | 1024x32 (4 KB) | Sub        |
-    | spi       | Slave | +0x1000 | 1024x32 (4 KB) | Sub        |
+    | Addrspace | Type  | Base    | Size           | Infos | Attributes |
+    | --------- | ----- | ------- | -------------- | ----- | ---------- |
+    | uart      | Slave | +0x0    | 1024x32 (4 KB) | Sub   |            |
+    | spi       | Slave | +0x1000 | 1024x32 (4 KB) | Sub   |            |
     <BLANKLINE>
     """
 

@@ -1,6 +1,8 @@
 // =============================================================================
 //
-// THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
 //
 // =============================================================================
 //
@@ -38,21 +40,21 @@
 
 module ucdp_apb2mem_example_a2m ( // ucdp_amba.ucdp_apb2mem.UcdpApb2memMod
   // apb_slv_i: APB Slave
-  input  logic [9:0]  apb_slv_paddr_i,   // APB Bus Address
-  input  logic        apb_slv_pwrite_i,  // APB Write Enable
-  input  logic [15:0] apb_slv_pwdata_i,  // APB Data
-  input  logic        apb_slv_penable_i, // APB Transfer Enable
-  input  logic        apb_slv_psel_i,    // APB Slave Select
+  input  wire  [9:0]  apb_slv_paddr_i,   // APB Bus Address
+  input  wire         apb_slv_pwrite_i,  // APB Write Enable
+  input  wire  [15:0] apb_slv_pwdata_i,  // APB Data
+  input  wire         apb_slv_penable_i, // APB Transfer Enable
+  input  wire         apb_slv_psel_i,    // APB Slave Select
   output logic [15:0] apb_slv_prdata_o,  // APB Data
   output logic        apb_slv_pslverr_o, // APB Response Error
   output logic        apb_slv_pready_o,  // APB Transfer Done
-  // mem_o
-  output logic        mem_ena_o,
-  output logic [7:0]  mem_addr_o,
-  output logic        mem_wena_o,
-  output logic [15:0] mem_wdata_o,
-  input  logic [15:0] mem_rdata_i,
-  input  logic        mem_err_i
+  // mem_o: Memory Interface
+  output logic        mem_ena_o,         // Memory Access Enable
+  output logic [7:0]  mem_addr_o,        // Memory Address
+  output logic        mem_wena_o,        // Memory Write Enable
+  output logic [15:0] mem_wdata_o,       // Memory Write Data
+  input  wire  [15:0] mem_rdata_i,       // Memory Read Data
+  input  wire         mem_err_i          // Memory Access Failed.
 );
 
 
@@ -72,3 +74,11 @@ endmodule // ucdp_apb2mem_example_a2m
 
 `default_nettype wire
 `end_keywords
+
+// =============================================================================
+//
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//
+// =============================================================================
