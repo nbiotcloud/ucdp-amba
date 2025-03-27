@@ -138,7 +138,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
     def add_slave(
         self,
         name: str,
-        baseaddr=u.AUTO,
+        baseaddr: int | str = u.AUTO,
         size: u.Bytes | None = None,
         proto: t.AmbaProto | None = None,
         masternames: u.Names | None = None,
@@ -289,28 +289,28 @@ class UcdpAhbMlExampleMod(u.AMod):
     """
     Just an Example Multilayer.
 
-    >>> print(UcdpAhbMlExampleMod().get_inst('u_ml').get_overview())
-    | Master > Slave | ram | periph | misc |
-    | -------------- | --- | ------ | ---- |
-    | ext            | X   |        | X    |
-    | dsp            | X   | X      |      |
-    <BLANKLINE>
-    <BLANKLINE>
-    <BLANKLINE>
-    * Top:     `None`
-    * Defines: `None`
-    * Size:    `3932320 KB`
-    <BLANKLINE>
-    | Addrspace | Type     | Base         | Size                        | Infos | Attributes |
-    | --------- | -------- | ------------ | --------------------------- | ----- | ---------- |
-    | reserved0 | Reserved | `0x0`        | `536870912x32 (2 GB)`       |       |            |
-    | misc      | Slave    | `0x80000000` | `5888x32 (23 KB)`           |       |            |
-    | reserved1 | Reserved | `0x80005C00` | `469756160x32 (1834985 KB)` |       |            |
-    | ram       | Slave    | `0xF0000000` | `16384x32 (64 KB)`          |       |            |
-    | periph    | Slave    | `0xF0010000` | `16384x32 (64 KB)`          |       |            |
-    | misc      | Slave    | `0xF0020000` | `8192x32 (32 KB)`           |       |            |
-    | reserved2 | Reserved | `0xF0028000` | `67067904x32 (261984 KB)`   |       |            |
-    <BLANKLINE>
+        >>> print(UcdpAhbMlExampleMod().get_inst('u_ml').get_overview())
+        | Master > Slave | ram | periph | misc |
+        | -------------- | --- | ------ | ---- |
+        | ext            | X   |        | X    |
+        | dsp            | X   | X      |      |
+        <BLANKLINE>
+        <BLANKLINE>
+        <BLANKLINE>
+        * Top:     `None`
+        * Defines: `None`
+        * Size:    `3932320 KB`
+        <BLANKLINE>
+        | Addrspace | Type     | Base         | Size                        | Infos | Attributes |
+        | --------- | -------- | ------------ | --------------------------- | ----- | ---------- |
+        | reserved0 | Reserved | `0x0`        | `536870912x32 (2 GB)`       |       |            |
+        | misc      | Slave    | `0x80000000` | `5888x32 (23 KB)`           |       |            |
+        | reserved1 | Reserved | `0x80005C00` | `469756160x32 (1834985 KB)` |       |            |
+        | ram       | Slave    | `0xF0000000` | `16384x32 (64 KB)`          |       |            |
+        | periph    | Slave    | `0xF0010000` | `16384x32 (64 KB)`          |       |            |
+        | misc      | Slave    | `0xF0020000` | `8192x32 (32 KB)`           |       |            |
+        | reserved2 | Reserved | `0xF0028000` | `67067904x32 (261984 KB)`   |       |            |
+        <BLANKLINE>
     """
 
     def _build(self):

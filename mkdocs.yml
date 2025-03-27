@@ -31,6 +31,10 @@ nav:
       - Contributing: contributing.md
   - API:
       - Overview: api.md
+      - AHB-Multilayer: api/ucdp_ahb_ml.md
+      - AHB-To-AHB-Bridge: api/ucdp_ahb2ahb.md
+      - AHB-To-APB-Bridge: api/ucdp_ahb2apb.md
+      - APB-To-Memory-Bridge: api/ucdp_apb2mem.md
 
 plugins:
   - search

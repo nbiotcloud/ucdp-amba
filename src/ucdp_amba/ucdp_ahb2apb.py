@@ -74,23 +74,25 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         errirq (bool): Use Error Interrupt instead of standard AHB Response Signalling
         optbw (bool): Optimized Bandwidth, faster response but increased logic depth
 
-    >>> class Mod(u.AMod):
-    ...     def _build(self):
-    ...         ahb2apb = UcdpAhb2apbMod(self, "u_ahb2apb")
-    ...         ahb2apb.add_slave("uart")
-    ...         ahb2apb.add_slave("spi")
+    Example:
 
-    >>> ahb2apb = Mod().get_inst("u_ahb2apb")
-    >>> print(ahb2apb.get_overview())
-    * Top:     `None`
-    * Defines: `None`
-    * Size:    `8 KB`
-    <BLANKLINE>
-    | Addrspace | Type  | Base      | Size             | Infos | Attributes |
-    | --------- | ----- | --------- | ---------------- | ----- | ---------- |
-    | uart      | Slave | `+0x0`    | `1024x32 (4 KB)` | Sub   |            |
-    | spi       | Slave | `+0x1000` | `1024x32 (4 KB)` | Sub   |            |
-    <BLANKLINE>
+        >>> class Mod(u.AMod):
+        ...     def _build(self):
+        ...         ahb2apb = UcdpAhb2apbMod(self, "u_ahb2apb")
+        ...         ahb2apb.add_slave("uart")
+        ...         ahb2apb.add_slave("spi")
+
+        >>> ahb2apb = Mod().get_inst("u_ahb2apb")
+        >>> print(ahb2apb.get_overview())
+        * Top:     `None`
+        * Defines: `None`
+        * Size:    `8 KB`
+        <BLANKLINE>
+        | Addrspace | Type  | Base      | Size             | Infos | Attributes |
+        | --------- | ----- | --------- | ---------------- | ----- | ---------- |
+        | uart      | Slave | `+0x0`    | `1024x32 (4 KB)` | Sub   |            |
+        | spi       | Slave | `+0x1000` | `1024x32 (4 KB)` | Sub   |            |
+        <BLANKLINE>
     """
 
     filelists: ClassVar[u.ModFileLists] = (
@@ -113,7 +115,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
     def add_slave(
         self,
         name: str,
-        baseaddr=u.AUTO,
+        baseaddr: int | str = u.AUTO,
         size: u.Bytes | None = None,
         proto: t.AmbaProto | None = None,
         route: u.Routeable | None = None,
@@ -131,7 +133,6 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
             proto: AMBA Protocol Selection.
             route: APB Slave Port to connect.
             ref: Logical Module connected.
-            auser: User vector if there is not incoming `auser` signal.
         """
         proto = proto or self.proto
         slave = Slave(name=name, addrdecoder=self, proto=proto, ref=ref)
