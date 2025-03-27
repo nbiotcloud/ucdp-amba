@@ -1,12 +1,14 @@
 // =============================================================================
 //
-// THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
 //
 // =============================================================================
 //
 //  MIT License
 //
-//  Copyright (c) 2024 nbiotcloud
+//  Copyright (c) 2024-2025 nbiotcloud
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -41,13 +43,13 @@
 
 module ucdp_ahb2ahb_example_usertp_hop_hop_p ( // ucdp_amba.ucdp_ahb2ahb.UcdpAhb2ahbMod
   // ahb_src_i: AHB Source
-  input  logic [1:0]  ahb_src_htrans_i, // AHB Transfer Type
-  input  logic [31:0] ahb_src_haddr_i,  // AHB Bus Address
-  input  logic [5:0]  ahb_src_hauser_i, // AHB Address User Channel
-  input  logic [5:0]  ahb_src_hwuser_i, // AHB Write Data User Channel
-  input  logic        ahb_src_hwrite_i, // AHB Write Enable
-  input  logic [2:0]  ahb_src_hsize_i,  // AHB Size
-  input  logic [31:0] ahb_src_hwdata_i, // AHB Data
+  input  wire  [1:0]  ahb_src_htrans_i, // AHB Transfer Type
+  input  wire  [31:0] ahb_src_haddr_i,  // AHB Bus Address
+  input  wire  [5:0]  ahb_src_hauser_i, // AHB Address User Channel
+  input  wire  [5:0]  ahb_src_hwuser_i, // AHB Write Data User Channel
+  input  wire         ahb_src_hwrite_i, // AHB Write Enable
+  input  wire  [2:0]  ahb_src_hsize_i,  // AHB Size
+  input  wire  [31:0] ahb_src_hwdata_i, // AHB Data
   output logic        ahb_src_hready_o, // AHB Transfer Done
   output logic        ahb_src_hresp_o,  // AHB Response Error
   output logic [31:0] ahb_src_hrdata_o, // AHB Data
@@ -61,11 +63,11 @@ module ucdp_ahb2ahb_example_usertp_hop_hop_p ( // ucdp_amba.ucdp_ahb2ahb.UcdpAhb
   output logic        ahb_tgt_hwrite_o, // AHB Write Enable
   output logic [2:0]  ahb_tgt_hsize_o,  // AHB Size
   output logic [31:0] ahb_tgt_hwdata_o, // AHB Data
-  input  logic        ahb_tgt_hready_i, // AHB Transfer Done
-  input  logic        ahb_tgt_hresp_i,  // AHB Response Error
-  input  logic [31:0] ahb_tgt_hrdata_i, // AHB Data
-  input  logic [5:0]  ahb_tgt_hruser_i, // AHB Read Data User Channel
-  input  logic [5:0]  ahb_tgt_hbuser_i  // AHB Read Response User Channel
+  input  wire         ahb_tgt_hready_i, // AHB Transfer Done
+  input  wire         ahb_tgt_hresp_i,  // AHB Response Error
+  input  wire  [31:0] ahb_tgt_hrdata_i, // AHB Data
+  input  wire  [5:0]  ahb_tgt_hruser_i, // AHB Read Data User Channel
+  input  wire  [5:0]  ahb_tgt_hbuser_i  // AHB Read Response User Channel
 );
 
 
@@ -118,3 +120,11 @@ endmodule // ucdp_ahb2ahb_example_usertp_hop_hop_p
 
 `default_nettype wire
 `end_keywords
+
+// =============================================================================
+//
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//
+// =============================================================================

@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024 nbiotcloud
+# Copyright (c) 2024-2025 nbiotcloud
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -96,11 +96,11 @@ def _prep_addr_iter(addr: int, burst_length: int, size: SizeType, burst_type=Bur
 
 def _check_bus_acc(data_width: int, addr: int, offs: int, size: SizeType, burst_type: BurstType) -> None:
     """Check AHB Bus Access."""
-    assert data_width >= (8 << size), f"Size argument {size!r} -> {8<<size} too big for data width of {data_width}!"
+    assert data_width >= (8 << size), f"Size argument {size!r} -> {8 << size} too big for data width of {data_width}!"
     assert (addr & ((1 << size) - 1)) == 0, f"Address {addr:x} is not aligned to size argument {size!r}!"
-    assert (burst_type not in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4)) or (
-        offs == 0
-    ), f"Address {addr:x} is not aligned to BurstType {burst_type!r} at size {size!r}!"
+    assert (burst_type not in (BurstType.INCR16, BurstType.INCR8, BurstType.INCR4)) or (offs == 0), (
+        f"Address {addr:x} is not aligned to BurstType {burst_type!r} at size {size!r}!"
+    )
 
 
 def _bottomless(value: int) -> Iterable[int]:
@@ -419,8 +419,7 @@ class AHBMasterDriver:
         hexaddr = str(Hex(addr, self.addr_width))
         hexdata = ",".join(str(Hex(x, 8 << size)) for x in data)
         self.logger.info(
-            f"=MST {rw}{err}= address: {hexaddr} data: [{hexdata}] "
-            f"size: {size.name} burst: {burst_type.name}{blenstr}"
+            f"=MST {rw}{err}= address: {hexaddr} data: [{hexdata}] size: {size.name} burst: {burst_type.name}{blenstr}"
         )
 
 

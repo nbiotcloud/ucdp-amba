@@ -1,8 +1,7 @@
-site_name: UCDP-AMBA
-site_description: Unified Chip Design Platform - AMBA
+site_name: "UCDP-AMBA"
+site_description: "Unified Chip Design Platform - AMBA"
 site_url: https://ucdp-amba.readthedocs.io/en
 repo_url: https://github.com/nbiotcloud/ucdp-amba
-#strict: true
 copyright: Copyright (c) 2024 nbiotcloud
 
 theme:
@@ -27,9 +26,11 @@ theme:
     - content.code.annotate
 
 nav:
-  - Get Started:
-    - Welcome to UCDP-AMBA: index.md
-    - Contributing: contributing.md
+  - Home:
+      - Welcome to UCDP-AMBA: index.md
+      - Contributing: contributing.md
+  - API:
+      - Overview: api.md
 
 plugins:
   - search

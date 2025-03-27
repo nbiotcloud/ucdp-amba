@@ -1,12 +1,14 @@
 // =============================================================================
 //
-// THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
 //
 // =============================================================================
 //
 //  MIT License
 //
-//  Copyright (c) 2024 nbiotcloud
+//  Copyright (c) 2024-2025 nbiotcloud
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -65,11 +67,11 @@
 
 module ucdp_ahb2ahb_example_usertp_minp_hsp_p ( // ucdp_amba.ucdp_ahb2ahb.UcdpAhb2ahbMod
   // ahb_src_i: AHB Source
-  input  logic [1:0]  ahb_src_htrans_i, // AHB Transfer Type
-  input  logic [31:0] ahb_src_haddr_i,  // AHB Bus Address
-  input  logic        ahb_src_hwrite_i, // AHB Write Enable
-  input  logic [2:0]  ahb_src_hsize_i,  // AHB Size
-  input  logic [31:0] ahb_src_hwdata_i, // AHB Data
+  input  wire  [1:0]  ahb_src_htrans_i, // AHB Transfer Type
+  input  wire  [31:0] ahb_src_haddr_i,  // AHB Bus Address
+  input  wire         ahb_src_hwrite_i, // AHB Write Enable
+  input  wire  [2:0]  ahb_src_hsize_i,  // AHB Size
+  input  wire  [31:0] ahb_src_hwdata_i, // AHB Data
   output logic        ahb_src_hready_o, // AHB Transfer Done
   output logic        ahb_src_hresp_o,  // AHB Response Error
   output logic [31:0] ahb_src_hrdata_o, // AHB Data
@@ -81,13 +83,14 @@ module ucdp_ahb2ahb_example_usertp_minp_hsp_p ( // ucdp_amba.ucdp_ahb2ahb.UcdpAh
   output logic        ahb_tgt_hwrite_o, // AHB Write Enable
   output logic [2:0]  ahb_tgt_hsize_o,  // AHB Size
   output logic [31:0] ahb_tgt_hwdata_o, // AHB Data
-  input  logic        ahb_tgt_hready_i, // AHB Transfer Done
-  input  logic        ahb_tgt_hresp_i,  // AHB Response Error
-  input  logic [31:0] ahb_tgt_hrdata_i, // AHB Data
-  input  logic [4:0]  ahb_tgt_hruser_i, // AHB Read Data User Channel
-  input  logic [4:0]  ahb_tgt_hbuser_i, // AHB Read Response User Channel
-  input  logic [4:0]  hauser_ext_i,     // Target HAUSER Extension
-  input  logic [4:0]  hwuser_ext_i      // Target HWUSER Extension
+  input  wire         ahb_tgt_hready_i, // AHB Transfer Done
+  input  wire         ahb_tgt_hresp_i,  // AHB Response Error
+  input  wire  [31:0] ahb_tgt_hrdata_i, // AHB Data
+  input  wire  [4:0]  ahb_tgt_hruser_i, // AHB Read Data User Channel
+  input  wire  [4:0]  ahb_tgt_hbuser_i, // AHB Read Response User Channel
+  // -
+  input  wire  [4:0]  hauser_ext_i,     // Target HAUSER Extension
+  input  wire  [4:0]  hwuser_ext_i      // Target HWUSER Extension
 );
 
 
@@ -97,26 +100,26 @@ module ucdp_ahb2ahb_example_usertp_minp_hsp_p ( // ucdp_amba.ucdp_ahb2ahb.UcdpAh
   //  Local Parameter
   // ------------------------------------------------------
   // ahb_trans
-  localparam integer       ahb_trans_width_p   = 2;
+  localparam integer       ahb_trans_width_p   = 2;    // Width in Bits
   localparam logic   [1:0] ahb_trans_min_p     = 2'h0; // AHB Transfer Type
   localparam logic   [1:0] ahb_trans_max_p     = 2'h3; // AHB Transfer Type
-  localparam logic   [1:0] ahb_trans_idle_e    = 2'h0;
-  localparam logic   [1:0] ahb_trans_busy_e    = 2'h1;
-  localparam logic   [1:0] ahb_trans_nonseq_e  = 2'h2;
-  localparam logic   [1:0] ahb_trans_seq_e     = 2'h3;
+  localparam logic   [1:0] ahb_trans_idle_e    = 2'h0; // No transfer
+  localparam logic   [1:0] ahb_trans_busy_e    = 2'h1; // Idle cycle within transfer
+  localparam logic   [1:0] ahb_trans_nonseq_e  = 2'h2; // Single transfer or first transfer of a burst
+  localparam logic   [1:0] ahb_trans_seq_e     = 2'h3; // Consecutive transfers of a burst
   localparam logic   [1:0] ahb_trans_default_p = 2'h0; // AHB Transfer Type
   // ahb_burst
-  localparam integer       ahb_burst_width_p   = 3;
+  localparam integer       ahb_burst_width_p   = 3;    // Width in Bits
   localparam logic   [2:0] ahb_burst_min_p     = 3'h0; // AHB Burst Type
   localparam logic   [2:0] ahb_burst_max_p     = 3'h7; // AHB Burst Type
-  localparam logic   [2:0] ahb_burst_single_e  = 3'h0;
-  localparam logic   [2:0] ahb_burst_incr_e    = 3'h1;
-  localparam logic   [2:0] ahb_burst_wrap4_e   = 3'h2;
-  localparam logic   [2:0] ahb_burst_incr4_e   = 3'h3;
-  localparam logic   [2:0] ahb_burst_wrap8_e   = 3'h4;
-  localparam logic   [2:0] ahb_burst_incr8_e   = 3'h5;
-  localparam logic   [2:0] ahb_burst_wrap16_e  = 3'h6;
-  localparam logic   [2:0] ahb_burst_incr16_e  = 3'h7;
+  localparam logic   [2:0] ahb_burst_single_e  = 3'h0; // Single transfer
+  localparam logic   [2:0] ahb_burst_incr_e    = 3'h1; // Incrementing burst of unspecified length
+  localparam logic   [2:0] ahb_burst_wrap4_e   = 3'h2; // 4-beat wrapping burst
+  localparam logic   [2:0] ahb_burst_incr4_e   = 3'h3; // 4-beat incrementing burst
+  localparam logic   [2:0] ahb_burst_wrap8_e   = 3'h4; // 8-beat wrapping burst
+  localparam logic   [2:0] ahb_burst_incr8_e   = 3'h5; // 8-beat incrementing burst
+  localparam logic   [2:0] ahb_burst_wrap16_e  = 3'h6; // 16-beat wrapping burst
+  localparam logic   [2:0] ahb_burst_incr16_e  = 3'h7; // 16-beat incrementing burst
   localparam logic   [2:0] ahb_burst_default_p = 3'h0; // AHB Burst Type
 
 
@@ -163,3 +166,11 @@ endmodule // ucdp_ahb2ahb_example_usertp_minp_hsp_p
 
 `default_nettype wire
 `end_keywords
+
+// =============================================================================
+//
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//
+// =============================================================================

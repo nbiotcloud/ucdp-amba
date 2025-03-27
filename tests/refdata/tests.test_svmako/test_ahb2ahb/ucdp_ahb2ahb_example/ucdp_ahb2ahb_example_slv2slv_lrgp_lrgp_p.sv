@@ -1,12 +1,14 @@
 // =============================================================================
 //
-// THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
 //
 // =============================================================================
 //
 //  MIT License
 //
-//  Copyright (c) 2024 nbiotcloud
+//  Copyright (c) 2024-2025 nbiotcloud
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -41,20 +43,20 @@
 
 module ucdp_ahb2ahb_example_slv2slv_lrgp_lrgp_p ( // ucdp_amba.ucdp_ahb2ahb.UcdpAhb2ahbMod
   // ahb_src_i: AHB Source
-  input  logic         ahb_src_hsel_i,      // AHB Slave Select
-  input  logic [35:0]  ahb_src_haddr_i,     // AHB Bus Address
-  input  logic         ahb_src_hwrite_i,    // AHB Write Enable
-  input  logic [1:0]   ahb_src_htrans_i,    // AHB Transfer Type
-  input  logic [2:0]   ahb_src_hsize_i,     // AHB Size
-  input  logic [2:0]   ahb_src_hburst_i,    // AHB Burst Type
-  input  logic [6:0]   ahb_src_hprot_i,     // AHB Transfer Protection
-  input  logic         ahb_src_hnonsec_i,   // AHB Secure Transfer
-  input  logic         ahb_src_hmastlock_i, // AHB Locked Sequence Enable
-  input  logic [127:0] ahb_src_hwdata_i,    // AHB Data
-  input  logic [15:0]  ahb_src_hwstrb_i,    // AHB Write Strobe
-  input  logic         ahb_src_hready_i,    // AHB Transfer Done to Slave
-  input  logic         ahb_src_hexcl_i,     // AHB Exclusive Transfer
-  input  logic [5:0]   ahb_src_hmaster_i,   // AHB Master ID
+  input  wire          ahb_src_hsel_i,      // AHB Slave Select
+  input  wire  [35:0]  ahb_src_haddr_i,     // AHB Bus Address
+  input  wire          ahb_src_hwrite_i,    // AHB Write Enable
+  input  wire  [1:0]   ahb_src_htrans_i,    // AHB Transfer Type
+  input  wire  [2:0]   ahb_src_hsize_i,     // AHB Size
+  input  wire  [2:0]   ahb_src_hburst_i,    // AHB Burst Type
+  input  wire  [6:0]   ahb_src_hprot_i,     // AHB Transfer Protection
+  input  wire          ahb_src_hnonsec_i,   // AHB Secure Transfer
+  input  wire          ahb_src_hmastlock_i, // AHB Locked Sequence Enable
+  input  wire  [127:0] ahb_src_hwdata_i,    // AHB Data
+  input  wire  [15:0]  ahb_src_hwstrb_i,    // AHB Write Strobe
+  input  wire          ahb_src_hready_i,    // AHB Transfer Done to Slave
+  input  wire          ahb_src_hexcl_i,     // AHB Exclusive Transfer
+  input  wire  [5:0]   ahb_src_hmaster_i,   // AHB Master ID
   output logic         ahb_src_hreadyout_o, // AHB Transfer Done from Slave
   output logic         ahb_src_hresp_o,     // AHB Response Error
   output logic         ahb_src_hexokay_o,   // AHB Exclusive Response
@@ -74,10 +76,10 @@ module ucdp_ahb2ahb_example_slv2slv_lrgp_lrgp_p ( // ucdp_amba.ucdp_ahb2ahb.Ucdp
   output logic         ahb_tgt_hready_o,    // AHB Transfer Done to Slave
   output logic         ahb_tgt_hexcl_o,     // AHB Exclusive Transfer
   output logic [5:0]   ahb_tgt_hmaster_o,   // AHB Master ID
-  input  logic         ahb_tgt_hreadyout_i, // AHB Transfer Done from Slave
-  input  logic         ahb_tgt_hresp_i,     // AHB Response Error
-  input  logic         ahb_tgt_hexokay_i,   // AHB Exclusive Response
-  input  logic [127:0] ahb_tgt_hrdata_i     // AHB Data
+  input  wire          ahb_tgt_hreadyout_i, // AHB Transfer Done from Slave
+  input  wire          ahb_tgt_hresp_i,     // AHB Response Error
+  input  wire          ahb_tgt_hexokay_i,   // AHB Exclusive Response
+  input  wire  [127:0] ahb_tgt_hrdata_i     // AHB Data
 );
 
 
@@ -141,3 +143,11 @@ endmodule // ucdp_ahb2ahb_example_slv2slv_lrgp_lrgp_p
 
 `default_nettype wire
 `end_keywords
+
+// =============================================================================
+//
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//
+// =============================================================================

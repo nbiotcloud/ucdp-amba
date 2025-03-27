@@ -9,8 +9,16 @@
     "verilog.linting.linter": "verilator",
     "verilog.linting.verilator.runAtFileLocation": false,
     "verilog.linting.verilator.useWSL": false,
-    "python.defaultInterpreterPath": ".nox/test/bin/python",
-    "python.terminal.activateEnvInCurrentTerminal": false
+    "python.defaultInterpreterPath": ".venv/bin/python3",
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "files.trimTrailingWhitespace": true
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "charliermarsh.ruff"
+    ]
   },
   "launch": {
     "version": "0.2.0",

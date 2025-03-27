@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024 nbiotcloud
+# Copyright (c) 2024-2025 nbiotcloud
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -188,7 +188,9 @@ async def ahb2apb_test(dut):  # noqa: C901, PLR0912
             err_resp = await ahb_mst.write(baseaddr[tgt] + offs, wdata, burst_type=btype, size=size)
             assert not err_resp, "Unexpected error response"
             for ln in range(5):
-                log.warning(f"MEM[{ln*16}:{ln*16+15}] = {[str(Hex(w, 8)) for w in mem[tgt][(ln*16):(ln*16+15)]]}")
+                log.warning(
+                    f"MEM[{ln * 16}:{ln * 16 + 15}] = {[str(Hex(w, 8)) for w in mem[tgt][(ln * 16) : (ln * 16 + 15)]]}"
+                )
         else:
             xdata = ahb_mst.calc_expected(offs=offs, size=size, blen=blen, mmask=mmask, mem=mem[tgt])
             err_resp, rdata = await ahb_mst.read(baseaddr[tgt] + offs, burst_type=btype, size=size)

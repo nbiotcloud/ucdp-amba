@@ -1,12 +1,14 @@
 // =============================================================================
 //
-// THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
 //
 // =============================================================================
 //
 //  MIT License
 //
-//  Copyright (c) 2024 nbiotcloud
+//  Copyright (c) 2024-2025 nbiotcloud
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -32,13 +34,15 @@
 // Data Model: ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
 //
 //
-// Size: 12 KB
+// * Top:     `None`
+// * Defines: `None`
+// * Size:    `12 KB`
 //
-// | Addrspace | Type  | Base    | Size           | Attributes |
-// | --------- | ----  | ----    | ----           | ---------- |
-// | default   | Slave | +0x0    | 1024x32 (4 KB) | Sub        |
-// | slv3      | Slave | +0x1000 | 1024x32 (4 KB) | Sub        |
-// | slv5      | Slave | +0x2000 | 1024x32 (4 KB) | Sub        |
+// | Addrspace | Type  | Base      | Size             | Infos | Attributes |
+// | --------- | ----- | --------- | ---------------- | ----- | ---------- |
+// | default   | Slave | `+0x0`    | `1024x32 (4 KB)` | Sub   |            |
+// | slv3      | Slave | `+0x1000` | `1024x32 (4 KB)` | Sub   |            |
+// | slv5      | Slave | `+0x2000` | `1024x32 (4 KB)` | Sub   |            |
 //
 // =============================================================================
 
@@ -46,20 +50,21 @@
 `default_nettype none  // implicit wires are forbidden
 
 module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb.UcdpAhb2apbMod
-  // main_i
-  input  logic        main_clk_i,
-  input  logic        main_rst_an_i,             // Async Reset (Low-Active)
+  // main_i: Clock and Reset
+  input  wire         main_clk_i,                // Clock
+  input  wire         main_rst_an_i,             // Async Reset (Low-Active)
+  // -
   output logic        irq_o,                     // APB Error Interrupt
   // ahb_slv_i: AHB Slave
-  input  logic        ahb_slv_hsel_i,            // AHB Slave Select
-  input  logic [31:0] ahb_slv_haddr_i,           // AHB Bus Address
-  input  logic        ahb_slv_hwrite_i,          // AHB Write Enable
-  input  logic [1:0]  ahb_slv_htrans_i,          // AHB Transfer Type
-  input  logic [2:0]  ahb_slv_hsize_i,           // AHB Size
-  input  logic [2:0]  ahb_slv_hburst_i,          // AHB Burst Type
-  input  logic [3:0]  ahb_slv_hprot_i,           // AHB Transfer Protection
-  input  logic [31:0] ahb_slv_hwdata_i,          // AHB Data
-  input  logic        ahb_slv_hready_i,          // AHB Transfer Done to Slave
+  input  wire         ahb_slv_hsel_i,            // AHB Slave Select
+  input  wire  [31:0] ahb_slv_haddr_i,           // AHB Bus Address
+  input  wire         ahb_slv_hwrite_i,          // AHB Write Enable
+  input  wire  [1:0]  ahb_slv_htrans_i,          // AHB Transfer Type
+  input  wire  [2:0]  ahb_slv_hsize_i,           // AHB Size
+  input  wire  [2:0]  ahb_slv_hburst_i,          // AHB Burst Type
+  input  wire  [3:0]  ahb_slv_hprot_i,           // AHB Transfer Protection
+  input  wire  [31:0] ahb_slv_hwdata_i,          // AHB Data
+  input  wire         ahb_slv_hready_i,          // AHB Transfer Done to Slave
   output logic        ahb_slv_hreadyout_o,       // AHB Transfer Done from Slave
   output logic        ahb_slv_hresp_o,           // AHB Response Error
   output logic [31:0] ahb_slv_hrdata_o,          // AHB Data
@@ -69,18 +74,18 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   output logic [31:0] apb_slv_default_pwdata_o,  // APB Data
   output logic        apb_slv_default_penable_o, // APB Transfer Enable
   output logic        apb_slv_default_psel_o,    // APB Slave Select
-  input  logic [31:0] apb_slv_default_prdata_i,  // APB Data
-  input  logic        apb_slv_default_pslverr_i, // APB Response Error
-  input  logic        apb_slv_default_pready_i,  // APB Transfer Done
+  input  wire  [31:0] apb_slv_default_prdata_i,  // APB Data
+  input  wire         apb_slv_default_pslverr_i, // APB Response Error
+  input  wire         apb_slv_default_pready_i,  // APB Transfer Done
   // apb_slv_slv3_o: APB Slave 'slv3'
   output logic [11:0] apb_slv_slv3_paddr_o,      // APB Bus Address
   output logic        apb_slv_slv3_pwrite_o,     // APB Write Enable
   output logic [31:0] apb_slv_slv3_pwdata_o,     // APB Data
   output logic        apb_slv_slv3_penable_o,    // APB Transfer Enable
   output logic        apb_slv_slv3_psel_o,       // APB Slave Select
-  input  logic [31:0] apb_slv_slv3_prdata_i,     // APB Data
-  input  logic        apb_slv_slv3_pslverr_i,    // APB Response Error
-  input  logic        apb_slv_slv3_pready_i,     // APB Transfer Done
+  input  wire  [31:0] apb_slv_slv3_prdata_i,     // APB Data
+  input  wire         apb_slv_slv3_pslverr_i,    // APB Response Error
+  input  wire         apb_slv_slv3_pready_i,     // APB Transfer Done
   // apb_slv_slv5_o: APB Slave 'slv5'
   output logic [11:0] apb_slv_slv5_paddr_o,      // APB Bus Address
   output logic [3:0]  apb_slv_slv5_pauser_o,     // APB Address User Channel
@@ -89,9 +94,9 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   output logic [3:0]  apb_slv_slv5_pstrb_o,      // APB Write Strobe
   output logic        apb_slv_slv5_penable_o,    // APB Transfer Enable
   output logic        apb_slv_slv5_psel_o,       // APB Slave Select
-  input  logic [31:0] apb_slv_slv5_prdata_i,     // APB Data
-  input  logic        apb_slv_slv5_pslverr_i,    // APB Response Error
-  input  logic        apb_slv_slv5_pready_i      // APB Transfer Done
+  input  wire  [31:0] apb_slv_slv5_prdata_i,     // APB Data
+  input  wire         apb_slv_slv5_pslverr_i,    // APB Response Error
+  input  wire         apb_slv_slv5_pready_i      // APB Transfer Done
 );
 
 
@@ -101,56 +106,56 @@ module ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue ( // ucdp_amba.ucdp_ahb2apb
   //  Local Parameter
   // ------------------------------------------------------
   // ahb_trans
-  localparam integer       ahb_trans_width_p      = 2;
+  localparam integer       ahb_trans_width_p      = 2;    // Width in Bits
   localparam logic   [1:0] ahb_trans_min_p        = 2'h0; // AHB Transfer Type
   localparam logic   [1:0] ahb_trans_max_p        = 2'h3; // AHB Transfer Type
-  localparam logic   [1:0] ahb_trans_idle_e       = 2'h0;
-  localparam logic   [1:0] ahb_trans_busy_e       = 2'h1;
-  localparam logic   [1:0] ahb_trans_nonseq_e     = 2'h2;
-  localparam logic   [1:0] ahb_trans_seq_e        = 2'h3;
+  localparam logic   [1:0] ahb_trans_idle_e       = 2'h0; // No transfer
+  localparam logic   [1:0] ahb_trans_busy_e       = 2'h1; // Idle cycle within transfer
+  localparam logic   [1:0] ahb_trans_nonseq_e     = 2'h2; // Single transfer or first transfer of a burst
+  localparam logic   [1:0] ahb_trans_seq_e        = 2'h3; // Consecutive transfers of a burst
   localparam logic   [1:0] ahb_trans_default_p    = 2'h0; // AHB Transfer Type
   // ahb_size
-  localparam integer       ahb_size_width_p       = 3;
+  localparam integer       ahb_size_width_p       = 3;    // Width in Bits
   localparam logic   [2:0] ahb_size_min_p         = 3'h0; // AHB Size
   localparam logic   [2:0] ahb_size_max_p         = 3'h7; // AHB Size
-  localparam logic   [2:0] ahb_size_byte_e        = 3'h0;
-  localparam logic   [2:0] ahb_size_halfword_e    = 3'h1;
-  localparam logic   [2:0] ahb_size_word_e        = 3'h2;
-  localparam logic   [2:0] ahb_size_doubleword_e  = 3'h3;
-  localparam logic   [2:0] ahb_size_fourword_e    = 3'h4;
-  localparam logic   [2:0] ahb_size_eightword_e   = 3'h5;
-  localparam logic   [2:0] ahb_size_sixteenword_e = 3'h6;
-  localparam logic   [2:0] ahb_size_kilobit_e     = 3'h7;
+  localparam logic   [2:0] ahb_size_byte_e        = 3'h0; // Byte
+  localparam logic   [2:0] ahb_size_halfword_e    = 3'h1; // Halfword
+  localparam logic   [2:0] ahb_size_word_e        = 3'h2; // Word
+  localparam logic   [2:0] ahb_size_doubleword_e  = 3'h3; // Doubleword
+  localparam logic   [2:0] ahb_size_fourword_e    = 3'h4; // 4-word
+  localparam logic   [2:0] ahb_size_eightword_e   = 3'h5; // 8-word
+  localparam logic   [2:0] ahb_size_sixteenword_e = 3'h6; // 16-word
+  localparam logic   [2:0] ahb_size_kilobit_e     = 3'h7; // 32-word
   localparam logic   [2:0] ahb_size_default_p     = 3'h0; // AHB Size
   // ahb_write
-  localparam integer       ahb_write_width_p      = 1;
+  localparam integer       ahb_write_width_p      = 1;    // Width in Bits
   localparam logic         ahb_write_min_p        = 1'b0; // AHB Write Enable
   localparam logic         ahb_write_max_p        = 1'b1; // AHB Write Enable
-  localparam logic         ahb_write_read_e       = 1'b0;
-  localparam logic         ahb_write_write_e      = 1'b1;
+  localparam logic         ahb_write_read_e       = 1'b0; // Read operation
+  localparam logic         ahb_write_write_e      = 1'b1; // Write operation
   localparam logic         ahb_write_default_p    = 1'b0; // AHB Write Enable
   // apb_ready
-  localparam integer       apb_ready_width_p      = 1;
+  localparam integer       apb_ready_width_p      = 1;    // Width in Bits
   localparam logic         apb_ready_min_p        = 1'b0; // APB Transfer Done
   localparam logic         apb_ready_max_p        = 1'b1; // APB Transfer Done
-  localparam logic         apb_ready_busy_e       = 1'b0;
-  localparam logic         apb_ready_done_e       = 1'b1;
+  localparam logic         apb_ready_busy_e       = 1'b0; // Ongoing
+  localparam logic         apb_ready_done_e       = 1'b1; // Done
   localparam logic         apb_ready_default_p    = 1'b1; // APB Transfer Done
   // apb_resp
-  localparam integer       apb_resp_width_p       = 1;
+  localparam integer       apb_resp_width_p       = 1;    // Width in Bits
   localparam logic         apb_resp_min_p         = 1'b0; // APB Response Error
   localparam logic         apb_resp_max_p         = 1'b1; // APB Response Error
-  localparam logic         apb_resp_okay_e        = 1'b0;
-  localparam logic         apb_resp_error_e       = 1'b1;
+  localparam logic         apb_resp_okay_e        = 1'b0; // OK
+  localparam logic         apb_resp_error_e       = 1'b1; // Error
   localparam logic         apb_resp_default_p     = 1'b0; // APB Response Error
   // fsm
-  localparam integer       fsm_width_p            = 2;
+  localparam integer       fsm_width_p            = 2;    // Width in Bits
   localparam logic   [1:0] fsm_min_p              = 2'h0; // AHB to APB FSM Type
   localparam logic   [1:0] fsm_max_p              = 2'h3; // AHB to APB FSM Type
-  localparam logic   [1:0] fsm_idle_st            = 2'h0;
-  localparam logic   [1:0] fsm_apb_ctrl_st        = 2'h1;
-  localparam logic   [1:0] fsm_apb_data_st        = 2'h2;
-  localparam logic   [1:0] fsm_ahb_err_st         = 2'h3;
+  localparam logic   [1:0] fsm_idle_st            = 2'h0; // No transfer
+  localparam logic   [1:0] fsm_apb_ctrl_st        = 2'h1; // Control Phase
+  localparam logic   [1:0] fsm_apb_data_st        = 2'h2; // Data Phase
+  localparam logic   [1:0] fsm_ahb_err_st         = 2'h3; // Error Phase
   localparam logic   [1:0] fsm_default_p          = 2'h0; // AHB to APB FSM Type
 
 
@@ -380,3 +385,11 @@ endmodule // ucdp_ahb2apb_example_ahb2apb_amba3_errirqtrue
 
 `default_nettype wire
 `end_keywords
+
+// =============================================================================
+//
+//   @generated @fully-generated
+//
+//   THIS FILE IS GENERATED!!! DO NOT EDIT MANUALLY. CHANGES ARE LOST.
+//
+// =============================================================================
