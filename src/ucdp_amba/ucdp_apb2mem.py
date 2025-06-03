@@ -92,6 +92,21 @@ class UcdpApb2memMod(u.ATailoredMod):
         """Build example top module and return it."""
         return UcdpApb2MemExampleMod()
 
+    @classmethod
+    def from_memiotype(cls, parent: u.BaseMod, name: str, memiotype: MemIoType, **kwargs) -> "UcdpApb2memMod":
+        """Create for `memiotype`."""
+        inst = cls(
+            parent,
+            name,
+            mem_addrwidth=memiotype.addrwidth,
+            datawidth=memiotype.datawidth,
+            addressing=memiotype.addressing,
+            **kwargs,
+        )
+        if memiotype != inst.memiotype:
+            raise ValueError(f"Cannot construct module for memiotype ({memiotype} != {inst.memiotype})")
+        return inst
+
     def get_overview(self) -> str:
         """Overview."""
         mem_addrwidth = self.mem_addrwidth or self.addrwidth
@@ -112,11 +127,15 @@ class UcdpApb2MemExampleMod(u.AMod):
             for addrwidth in (16, 24, 32):
                 for mem_addrwidth in ("", 8, addrwidth):
                     for addressing in ("byte", "data"):
+                        name = f"u_d{datawidth}_a{addrwidth}_m{mem_addrwidth}_{addressing}"
                         UcdpApb2memMod(
                             self,
-                            f"u_d{datawidth}_a{addrwidth}_m{mem_addrwidth}_{addressing}",
+                            name,
                             datawidth=datawidth,
                             addrwidth=addrwidth,
                             mem_addrwidth=mem_addrwidth or None,
                             addressing=addressing,
                         )
+
+        memiotype = MemIoType(addrwidth=24, datawidth=32, addressing="byte", writable=True, err=True)
+        UcdpApb2memMod.from_memiotype(self, "u_b2m", memiotype)
