@@ -26,10 +26,13 @@
 Unified Chip Design Platform - AMBA - APB2MEM.
 """
 
+import math
 from typing import ClassVar
 
 import ucdp as u
-from ucdp_glbl.mem import MemIoType
+from icdutil.num import is_power_of2
+from ucdp_addr.addrspace import Addrspace
+from ucdp_glbl.mem import Addressing, MemIoType
 
 from . import types as t
 
@@ -39,8 +42,12 @@ class UcdpApb2memMod(u.ATailoredMod):
 
     datawidth: int = 32
     """Data Width in Bits."""
-    addrwidth: int = 12
+    addrwidth: int = 32
     """Address Width in Bits."""
+    mem_addrwidth: int | None = None
+    """Memory Address Width, if different from `addrwidth`"""
+    addressing: Addressing = "data"
+    """Addressing-Width."""
     proto: t.AmbaProto = t.AmbaProto()
     """AMBA Protocol Specifier."""
 
@@ -54,25 +61,62 @@ class UcdpApb2memMod(u.ATailoredMod):
     )
 
     def _build(self):
-        self.add_port(
-            t.ApbSlvType(proto=self.proto, addrwidth=self.addrwidth, datawidth=self.datawidth),
-            "apb_slv_i",
-            title="APB Slave Input",
-        )
-        self.add_port(
-            MemIoType(addrwidth=self.addrwidth - 2, datawidth=self.datawidth, writable=True, err=True),
-            "mem_o",
-            title="Memory Interface",
-        )
+        self.add_port(self.apbslvtype, "apb_slv_i", title="APB Slave Input")
+        self.add_port(self.memiotype, "mem_o", title="Memory Interface")
+
+    @property
+    def apbslvtype(self) -> t.ApbSlvType:
+        """APB Slave Type."""
+        return t.ApbSlvType(proto=self.proto, addrwidth=self.addrwidth, datawidth=self.datawidth)
+
+    @property
+    def memiotype(self) -> MemIoType:
+        """Memory IO-Type."""
+        mem_addrwidth = self.mem_addrwidth or self.addrwidth
+        return MemIoType(addrwidth=mem_addrwidth, datawidth=self.datawidth, writable=True, err=True)
+
+    @property
+    def addrslice(self) -> u.Slice:
+        """Address Slice To Extract Memory Address From Bus Address."""
+        if self.addressing == "data":
+            if not is_power_of2(self.datawidth):
+                raise ValueError("addressing='data' requires datawidth power of 2")
+            right = int(math.log2(self.datawidth / 8))
+        else:
+            right = 0
+
+        return u.Slice(width=self.memiotype.addrwidth, right=right)
 
     @staticmethod
     def build_top(**kwargs):
         """Build example top module and return it."""
         return UcdpApb2MemExampleMod()
 
+    def get_overview(self) -> str:
+        """Overview."""
+        mem_addrwidth = self.mem_addrwidth or self.addrwidth
+        addressing = f"Addressing-Width: {self.addressing}"
+        if self.addressing == "data":
+            addrspace = Addrspace(depth=2**mem_addrwidth, width=self.datawidth)
+        else:
+            addrspace = Addrspace(size=2**mem_addrwidth, width=self.datawidth)
+        size = f"Size:             {addrspace.depth}x{addrspace.width} ({addrspace.size})"
+        return f"{addressing}\n{size}"
+
 
 class UcdpApb2MemExampleMod(u.AMod):
     """Example Converter."""
 
     def _build(self):
-        UcdpApb2memMod(self, "u_a2m", datawidth=16, addrwidth=10)
+        for datawidth in (8, 16, 32):
+            for addrwidth in (16, 24, 32):
+                for mem_addrwidth in ("", 8, addrwidth):
+                    for addressing in ("byte", "data"):
+                        UcdpApb2memMod(
+                            self,
+                            f"u_d{datawidth}_a{addrwidth}_m{mem_addrwidth}_{addressing}",
+                            datawidth=datawidth,
+                            addrwidth=addrwidth,
+                            mem_addrwidth=mem_addrwidth or None,
+                            addressing=addressing,
+                        )

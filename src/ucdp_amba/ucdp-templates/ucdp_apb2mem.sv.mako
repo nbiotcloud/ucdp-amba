@@ -22,21 +22,24 @@
 ## SOFTWARE.
 ##
 
+<%!
+import ucdpsv as usv
+%>
 
 <%inherit file="sv.mako"/>
 
 <%def name="logic(indent=0, skip=None)">\
-
-
+<%
+rslvr = usv.get_resolver(mod)
+%>\
 ${parent.logic(indent=indent, skip=skip)}\
 
 assign mem_ena_o = apb_slv_penable_i & apb_slv_psel_i;
-assign mem_addr_o = apb_slv_paddr_i[${mod.addrwidth-1}:2];
+assign mem_addr_o = apb_slv_paddr_i${rslvr.resolve_slice(mod.addrslice)};
 assign mem_wena_o = apb_slv_pwrite_i;
 assign mem_wdata_o = apb_slv_pwdata_i;
 
 assign apb_slv_prdata_o = mem_rdata_i;
 assign apb_slv_pslverr_o = mem_err_i;
 assign apb_slv_pready_o = 1'b1;
-
 </%def>

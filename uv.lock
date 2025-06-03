@@ -1535,6 +1535,7 @@ wheels = [
 name = "ucdp-amba"
 source = { editable = "." }
 dependencies = [
+    { name = "icdutil" },
     { name = "ucdp" },
     { name = "ucdp-addr" },
     { name = "ucdp-glbl" },
@@ -1561,9 +1562,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ucdp", specifier = ">=0.8.0" },
-    { name = "ucdp-addr", specifier = ">=1.0.0" },
-    { name = "ucdp-glbl", specifier = ">=0.7.0" },
+    { name = "icdutil", specifier = ">=1.0.0" },
+    { name = "ucdp", specifier = ">=0.27.1" },
+    { name = "ucdp-addr", specifier = ">=1.7.0" },
+    { name = "ucdp-glbl", specifier = ">=1.5.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1587,14 +1589,14 @@ dev = [
 
 [[package]]
 name = "ucdp-glbl"
-version = "1.4.0"
+version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ucdp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/36/ad61ee4434970f16926bc13a3dc2638d9c583961c2416643ae76de811e74/ucdp_glbl-1.4.0.tar.gz", hash = "sha256:90584e2793de468ad9a31eb69381d9299c29cf1ccdcc6ff9c0fa4847a7fa7cb9", size = 8315 }
+sdist = { url = "https://files.pythonhosted.org/packages/14/27/63429e2687e955d9c78040c92b383af8a2df6f8f4d30b55b71b5f2cb6191/ucdp_glbl-1.5.0.tar.gz", hash = "sha256:88d48ee23d7bb98c51c7d3d5951c4f28f247f985965c9012e7dcec3e084aeb24", size = 8707 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/aa/218cae0b0053473da69ef04c35b8f856af6418729b146e2c06f170d79f10/ucdp_glbl-1.4.0-py3-none-any.whl", hash = "sha256:0cd11fab99385270c84dfa72801e6660f2f071098d2cbda7c9b70f04d358ac10", size = 13829 },
+    { url = "https://files.pythonhosted.org/packages/3b/13/1d4c66c62da1dc9d1c06f17f0a5197efae9642d62ffc0ff6907b20fa0311/ucdp_glbl-1.5.0-py3-none-any.whl", hash = "sha256:dc732e923bd360f902f613b8a9bcb4b4ffa74b99192def9e8cf8da9bab1ee7a7", size = 14285 },
 ]
 
 [[package]]
