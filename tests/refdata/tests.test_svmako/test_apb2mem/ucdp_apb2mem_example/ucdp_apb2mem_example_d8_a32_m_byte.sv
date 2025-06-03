@@ -30,38 +30,40 @@
 //
 // =============================================================================
 //
-// Module:     ucdp_amba.ucdp_apb2mem_example_a2m
+// Module:     ucdp_amba.ucdp_apb2mem_example_d8_a32_m_byte
 // Data Model: ucdp_amba.ucdp_apb2mem.UcdpApb2memMod
+//
+//
+// Addressing-Width: byte
+// Size:             4294967296x8 (4 GB)
 //
 // =============================================================================
 
 `begin_keywords "1800-2009"
 `default_nettype none  // implicit wires are forbidden
 
-module ucdp_apb2mem_example_a2m ( // ucdp_amba.ucdp_apb2mem.UcdpApb2memMod
+module ucdp_apb2mem_example_d8_a32_m_byte ( // ucdp_amba.ucdp_apb2mem.UcdpApb2memMod
   // apb_slv_i: APB Slave
-  input  wire  [9:0]  apb_slv_paddr_i,   // APB Bus Address
+  input  wire  [31:0] apb_slv_paddr_i,   // APB Bus Address
   input  wire         apb_slv_pwrite_i,  // APB Write Enable
-  input  wire  [15:0] apb_slv_pwdata_i,  // APB Data
+  input  wire  [7:0]  apb_slv_pwdata_i,  // APB Data
   input  wire         apb_slv_penable_i, // APB Transfer Enable
   input  wire         apb_slv_psel_i,    // APB Slave Select
-  output logic [15:0] apb_slv_prdata_o,  // APB Data
+  output logic [7:0]  apb_slv_prdata_o,  // APB Data
   output logic        apb_slv_pslverr_o, // APB Response Error
   output logic        apb_slv_pready_o,  // APB Transfer Done
   // mem_o: Memory Interface
   output logic        mem_ena_o,         // Memory Access Enable
-  output logic [7:0]  mem_addr_o,        // Memory Address
+  output logic [31:0] mem_addr_o,        // Memory Address
   output logic        mem_wena_o,        // Memory Write Enable
-  output logic [15:0] mem_wdata_o,       // Memory Write Data
-  input  wire  [15:0] mem_rdata_i,       // Memory Read Data
+  output logic [7:0]  mem_wdata_o,       // Memory Write Data
+  input  wire  [7:0]  mem_rdata_i,       // Memory Read Data
   input  wire         mem_err_i          // Memory Access Failed.
 );
 
 
-
-
 assign mem_ena_o = apb_slv_penable_i & apb_slv_psel_i;
-assign mem_addr_o = apb_slv_paddr_i[9:2];
+assign mem_addr_o = apb_slv_paddr_i[31:0];
 assign mem_wena_o = apb_slv_pwrite_i;
 assign mem_wdata_o = apb_slv_pwdata_i;
 
@@ -69,8 +71,7 @@ assign apb_slv_prdata_o = mem_rdata_i;
 assign apb_slv_pslverr_o = mem_err_i;
 assign apb_slv_pready_o = 1'b1;
 
-
-endmodule // ucdp_apb2mem_example_a2m
+endmodule // ucdp_apb2mem_example_d8_a32_m_byte
 
 `default_nettype wire
 `end_keywords
