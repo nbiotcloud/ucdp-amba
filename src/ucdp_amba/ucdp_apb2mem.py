@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024-2025 nbiotcloud
+# Copyright (c) 2024-2026 nbiotcloud
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@ class UcdpApb2memMod(u.ATailoredMod):
     """Memory Address Width, if different from `addrwidth`"""
     addressing: Addressing = "data"
     """Addressing-Width."""
-    proto: t.AmbaProto = t.AmbaProto()
+    proto: t.AmbaProto = t.AMBA3
     """AMBA Protocol Specifier."""
 
     filelists: ClassVar[u.ModFileLists] = (
@@ -73,7 +73,9 @@ class UcdpApb2memMod(u.ATailoredMod):
     def memiotype(self) -> MemIoType:
         """Memory IO-Type."""
         mem_addrwidth = self.mem_addrwidth or self.addrwidth
-        return MemIoType(addrwidth=mem_addrwidth, datawidth=self.datawidth, writable=True, err=True)
+        return MemIoType(
+            addrwidth=mem_addrwidth, datawidth=self.datawidth, writable=True, err=True, addressing=self.addressing
+        )
 
     @property
     def addrslice(self) -> u.Slice:
@@ -137,5 +139,12 @@ class UcdpApb2MemExampleMod(u.AMod):
                             addressing=addressing,
                         )
 
-        memiotype = MemIoType(addrwidth=24, datawidth=32, addressing="byte", writable=True, err=True)
-        UcdpApb2memMod.from_memiotype(self, "u_b2m", memiotype)
+                        name = f"u_d{datawidth}_a{addrwidth}_m{mem_addrwidth}_{addressing}_io"
+                        memiotype = MemIoType(
+                            datawidth=datawidth,
+                            addrwidth=mem_addrwidth or addrwidth,
+                            addressing=addressing,
+                            writable=True,
+                            err=True,
+                        )
+                        UcdpApb2memMod.from_memiotype(self, name, memiotype, addrwidth=addrwidth)

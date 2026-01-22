@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024-2025 nbiotcloud
+# Copyright (c) 2024-2026 nbiotcloud
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         ),
     )
 
-    proto: t.AmbaProto = t.AmbaProto()
+    proto: t.AmbaProto = t.AMBA3
     errirq: bool = False
     optbw: bool = False
     is_sub: bool = True

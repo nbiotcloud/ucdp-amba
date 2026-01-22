@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2024-2025 nbiotcloud
+# Copyright (c) 2024-2026 nbiotcloud
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -89,7 +89,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
             template_filepaths=("ucdp_ahb_ml.sv.mako", "sv.mako"),
         ),
     )
-    proto: t.AmbaProto = t.AmbaProto()
+    proto: t.AmbaProto = t.AMBA3
     """Default Protocol."""
     is_sub: bool = False
     """Full Address Decoding By Default."""
