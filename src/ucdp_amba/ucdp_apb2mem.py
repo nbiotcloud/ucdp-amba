@@ -73,7 +73,9 @@ class UcdpApb2memMod(u.ATailoredMod):
     def memiotype(self) -> MemIoType:
         """Memory IO-Type."""
         mem_addrwidth = self.mem_addrwidth or self.addrwidth
-        return MemIoType(addrwidth=mem_addrwidth, datawidth=self.datawidth, writable=True, err=True)
+        return MemIoType(
+            addrwidth=mem_addrwidth, datawidth=self.datawidth, writable=True, err=True, addressing=self.addressing
+        )
 
     @property
     def addrslice(self) -> u.Slice:
@@ -137,5 +139,12 @@ class UcdpApb2MemExampleMod(u.AMod):
                             addressing=addressing,
                         )
 
-        memiotype = MemIoType(addrwidth=24, datawidth=32, addressing="byte", writable=True, err=True)
-        UcdpApb2memMod.from_memiotype(self, "u_b2m", memiotype)
+                        name = f"u_d{datawidth}_a{addrwidth}_m{mem_addrwidth}_{addressing}_io"
+                        memiotype = MemIoType(
+                            datawidth=datawidth,
+                            addrwidth=mem_addrwidth or addrwidth,
+                            addressing=addressing,
+                            writable=True,
+                            err=True,
+                        )
+                        UcdpApb2memMod.from_memiotype(self, name, memiotype, addrwidth=addrwidth)
