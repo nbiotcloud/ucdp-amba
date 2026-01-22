@@ -104,7 +104,7 @@ class UcdpAhb2apbMod(u.ATailoredMod, AddrDecoder):
         ),
     )
 
-    proto: t.AmbaProto = t.AmbaProto()
+    proto: t.AmbaProto = t.AMBA3
     errirq: bool = False
     optbw: bool = False
     is_sub: bool = True

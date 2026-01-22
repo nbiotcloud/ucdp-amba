@@ -89,7 +89,7 @@ class UcdpAhbMlMod(u.ATailoredMod, AddrMatrix):
             template_filepaths=("ucdp_ahb_ml.sv.mako", "sv.mako"),
         ),
     )
-    proto: t.AmbaProto = t.AmbaProto()
+    proto: t.AmbaProto = t.AMBA3
     """Default Protocol."""
     is_sub: bool = False
     """Full Address Decoding By Default."""

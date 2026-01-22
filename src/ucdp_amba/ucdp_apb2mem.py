@@ -48,7 +48,7 @@ class UcdpApb2memMod(u.ATailoredMod):
     """Memory Address Width, if different from `addrwidth`"""
     addressing: Addressing = "data"
     """Addressing-Width."""
-    proto: t.AmbaProto = t.AmbaProto()
+    proto: t.AmbaProto = t.AMBA3
     """AMBA Protocol Specifier."""
 
     filelists: ClassVar[u.ModFileLists] = (
